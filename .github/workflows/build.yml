@@ -40,8 +40,6 @@ jobs:
         run: |
           mkdir -p cmd/server/web
           cp -r web/dist cmd/server/web/
-          mkdir -p cmd/server/migrations
-          cp migrations/*.sql cmd/server/migrations/
 
       - name: Run Go tests
         run: go test -v ./...

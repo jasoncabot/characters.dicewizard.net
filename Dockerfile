@@ -12,9 +12,8 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# Copy frontend dist and migrations for embedding
+# Copy frontend dist for embedding (migrations are already in cmd/server/migrations)
 COPY --from=frontend /app/web/dist ./cmd/server/web/dist
-COPY migrations/*.sql ./cmd/server/migrations/
 RUN CGO_ENABLED=0 go build -o server ./cmd/server
 
 # Final image

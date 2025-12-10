@@ -12,8 +12,6 @@ frontend:
 copy-assets:
 	mkdir -p cmd/server/web
 	cp -r web/dist cmd/server/web/
-	mkdir -p cmd/server/migrations
-	cp migrations/*.sql cmd/server/migrations/
 
 # Run frontend dev server
 frontend-dev:
@@ -40,7 +38,6 @@ clean:
 	rm -rf bin/
 	rm -rf web/dist/
 	rm -rf cmd/server/web/
-	rm -rf cmd/server/migrations/
 
 # Build Docker image
 docker:

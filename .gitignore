@@ -6,6 +6,9 @@ bin/
 web/dist/
 web/node_modules/
 
+# Embedded frontend assets (built during make build)
+cmd/server/web/
+
 # Go
 *.test
 coverage.out
