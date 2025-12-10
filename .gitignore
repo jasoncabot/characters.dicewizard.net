@@ -1,0 +1,32 @@
+# Binaries
+bin/
+*.exe
+
+# Frontend build output
+web/dist/
+web/node_modules/
+
+# Go
+*.test
+coverage.out
+
+# SQLite database
+*.db
+data/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+
+# Air (Go hot reload)
+tmp/
