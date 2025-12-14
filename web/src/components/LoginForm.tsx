@@ -1,17 +1,18 @@
-import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useState } from "react";
+import { Button, Field, Input, Label } from "@headlessui/react";
+import { useAuth } from "../hooks/useAuth";
 
 export function LoginForm() {
   const { login, register } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
@@ -21,78 +22,90 @@ export function LoginForm() {
         await login(username, password);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="max-w-md w-full mx-4">
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-slate-700/50">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="mx-4 w-full max-w-md">
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-8 shadow-2xl backdrop-blur-sm">
+          <div className="mb-8 text-center">
+            <h1 className="mb-2 text-3xl font-bold text-white">
               ⚔️ Character Sheets
             </h1>
             <p className="text-slate-400">
-              {isRegister ? 'Create your account' : 'Welcome back, adventurer'}
+              {isRegister ? "Create your account" : "Welcome back, adventurer"}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
+            <Field>
+              <Label
+                htmlFor="username"
+                className="mb-2 block cursor-default text-sm font-medium text-slate-300"
+              >
                 Username
-              </label>
-              <input
+              </Label>
+              <Input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="w-full cursor-text rounded-lg border border-slate-600 bg-slate-900/50 px-4 py-3 text-white placeholder-slate-500 transition hover:border-slate-500 focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none data-[focus]:border-purple-500"
                 placeholder="Enter your username"
                 required
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+            <Field>
+              <Label
+                htmlFor="password"
+                className="mb-2 block cursor-default text-sm font-medium text-slate-300"
+              >
                 Password
-              </label>
-              <input
+              </Label>
+              <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="w-full cursor-text rounded-lg border border-slate-600 bg-slate-900/50 px-4 py-3 text-white placeholder-slate-500 transition hover:border-slate-500 focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none data-[focus]:border-purple-500"
                 placeholder="Enter your password"
                 required
               />
-            </div>
+            </Field>
 
             {error && (
-              <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
+              <div className="rounded-lg border border-red-500/50 bg-red-500/20 p-3 text-sm text-red-300">
                 {error}
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-purple-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full cursor-pointer rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3 font-semibold text-white shadow-lg transition hover:from-purple-500 hover:to-pink-500 hover:shadow-purple-500/25 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-800 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
             >
-              {isLoading ? 'Loading...' : isRegister ? 'Create Account' : 'Sign In'}
-            </button>
+              {isLoading
+                ? "Loading..."
+                : isRegister
+                  ? "Create Account"
+                  : "Sign In"}
+            </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <button
+            <Button
               onClick={() => setIsRegister(!isRegister)}
-              className="text-purple-400 hover:text-purple-300 text-sm transition"
+              className="cursor-pointer rounded px-2 py-1 text-sm text-purple-400 transition hover:text-purple-300 hover:underline focus:ring-2 focus:ring-purple-400 focus:outline-none"
             >
-              {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Register"}
-            </button>
+              {isRegister
+                ? "Already have an account? Sign in"
+                : "Don't have an account? Register"}
+            </Button>
           </div>
         </div>
       </div>

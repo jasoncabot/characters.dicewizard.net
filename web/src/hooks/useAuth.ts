@@ -1,7 +1,14 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import { authApi } from '../api/client';
-import type { User } from '../types/character';
-import React from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  type ReactNode,
+} from "react";
+import { authApi } from "../api/client";
+import type { User } from "../types/character";
+import React from "react";
 
 interface AuthContextType {
   user: User | null;
@@ -22,35 +29,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
-      authApi.me()
+      authApi
+        .me()
         .then(setUser)
         .catch(() => {
-          localStorage.removeItem('token');
+          localStorage.removeItem("token");
         })
         .finally(() => setIsLoading(false));
     } else {
-      setIsLoading(false);
+      setTimeout(() => setIsLoading(false), 0);
     }
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
     const response = await authApi.login({ username, password });
-    localStorage.setItem('token', response.token);
+    localStorage.setItem("token", response.token);
     setUser(response.user);
     setIsNewUser(false);
   }, []);
 
   const register = useCallback(async (username: string, password: string) => {
     const response = await authApi.register({ username, password });
-    localStorage.setItem('token', response.token);
+    localStorage.setItem("token", response.token);
     setUser(response.user);
     setIsNewUser(true); // Flag that this user just registered
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     setUser(null);
     setIsNewUser(false);
   }, []);
@@ -71,16 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         clearNewUserFlag,
-      }
+      },
     },
-    children
+    children,
   );
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
