@@ -23,8 +23,10 @@ function AppContent() {
   // Auto-navigate new users to character creation
   useEffect(() => {
     if (isNewUser) {
-      setView('new');
-      clearNewUserFlag();
+      setTimeout(() => {
+        setView('new');
+        clearNewUserFlag();
+      }, 0);
     }
   }, [isNewUser, clearNewUserFlag]);
 

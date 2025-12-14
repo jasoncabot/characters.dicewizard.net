@@ -99,25 +99,41 @@ function CharacterCard({
       onClick={onSelect}
       className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 p-5 cursor-pointer hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 transition group"
     >
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h3 className="text-lg font-bold text-white group-hover:text-purple-300 transition">
-            {character.name}
-          </h3>
-          <p className="text-slate-400 text-sm">
-            Level {character.level} {character.race} {character.class}
-          </p>
+      <div className="flex gap-4 mb-3">
+        {/* Character Portrait */}
+        <div className="flex-shrink-0">
+          <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-600 bg-slate-900/50">
+            <img
+              src={`/portraits/${character.race.toLowerCase()}-${character.class.toLowerCase()}.svg`}
+              alt={`${character.race} ${character.class}`}
+              className="w-full h-full object-cover"
+            />
+          </div>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="text-slate-500 hover:text-red-400 transition p-1"
-          title="Delete character"
-        >
-          🗑️
-        </button>
+
+        {/* Character Info */}
+        <div className="flex-grow">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-lg font-bold text-white group-hover:text-purple-300 transition">
+                {character.name}
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Level {character.level} {character.race} {character.class}
+              </p>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="text-slate-500 hover:text-red-400 transition p-1"
+              title="Delete character"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-4 mb-3">

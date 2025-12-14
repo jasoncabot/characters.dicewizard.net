@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  
+    <defs>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#4682b4;stop-opacity:0.3" />
+        <stop offset="100%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      </linearGradient>
+      <linearGradient id="skin" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#dc143c;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#be001e;stop-opacity:1" />
+      </linearGradient>
+      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+      </filter>
+      
+    </defs>
+  
+  <!-- Background -->
+  <rect width="200" height="200" fill="url(#bg)"/>
+  
+  <!-- Aura Effect -->
+  
+  
+  <!-- Body/Shoulders -->
+  
+      <path d="M50 165 Q45 175 40 200 L160 200 Q155 175 150 165 Q125 155 100 158 Q75 155 50 165" fill="#696969"/>
+      <path d="M55 168 Q100 160 145 168 Q140 175 100 172 Q60 175 55 168" fill="#c0c0c0"/>
+      <path d="M70 175 L70 200" stroke="#d3d3d3" stroke-width="2"/>
+      <path d="M130 175 L130 200" stroke="#d3d3d3" stroke-width="2"/>
+      <circle cx="100" cy="178" r="8" fill="#4682b4" stroke="#d3d3d3" stroke-width="1"/>
+  
+  <!-- Neck -->
+  <path d="M85 150 Q100 145 115 150 L115 165 Q100 160 85 165 Z" fill="url(#skin)" filter="url(#shadow)"/>
+  
+  <!-- Ears (behind head) -->
+  
+        <path d="M55 90 Q45 70 40 50 Q50 65 58 85" fill="url(#skin)" stroke="#c80028" stroke-width="1"/>
+        <path d="M145 90 Q155 70 160 50 Q150 65 142 85" fill="url(#skin)" stroke="#c80028" stroke-width="1"/>
+  
+  <!-- Face -->
+  <ellipse cx="100" cy="95" rx="40" ry="50" fill="url(#skin)" filter="url(#shadow)"/>
+  
+  <!-- Special Features (behind face details) -->
+  
+        <path d="M70 55 Q60 35 55 15 Q65 30 75 50" fill="#2f2f2f" stroke="#1a1a1a" stroke-width="1"/>
+        <path d="M130 55 Q140 35 145 15 Q135 30 125 50" fill="#2f2f2f" stroke="#1a1a1a" stroke-width="1"/>
+  
+  <!-- Hair -->
+  
+    <ellipse cx="100" cy="60" rx="42" ry="25" fill="#8b0000"/>
+    <path d="M58 70 Q60 50 100 45 Q140 50 142 70" fill="#8b0000"/>
+  
+  <!-- Eyes -->
+  
+      <ellipse cx="82" cy="90" rx="8" ry="6" fill="#1a1a1a"/>
+      <ellipse cx="118" cy="90" rx="8" ry="6" fill="#1a1a1a"/>
+      <circle cx="82" cy="90" r="5" fill="#ff0000"/>
+      <circle cx="118" cy="90" r="5" fill="#ff0000"/>
+      <circle cx="82" cy="90" r="2" fill="#ff0000" opacity="0.7"/>
+      <circle cx="118" cy="90" r="2" fill="#ff0000" opacity="0.7"/>
+  
+  <!-- Nose & Mouth -->
+  
+      <path d="M100 95 Q102 105 100 112" fill="none" stroke="#be001e" stroke-width="2"/>
+      <path d="M88 125 Q100 132 112 125" fill="none" stroke="#be001e" stroke-width="2"/>
+  
+  <!-- Class Elements -->
+  <path d="M20 140 L25 200" stroke="#c0c0c0" stroke-width="4"/>
+              <path d="M15 145 L30 135" stroke="#c0c0c0" stroke-width="3"/>
+  
+  <!-- Frame -->
+  <rect x="5" y="5" width="190" height="190" fill="none" stroke="#c0c0c0" stroke-width="3" rx="10" opacity="0.5"/>
+</svg>

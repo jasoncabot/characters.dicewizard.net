@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  
+    <defs>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#ff4500;stop-opacity:0.3" />
+        <stop offset="100%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      </linearGradient>
+      <linearGradient id="skin" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#f5e6d3;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#d7c8b5;stop-opacity:1" />
+      </linearGradient>
+      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+      </filter>
+      
+    <radialGradient id="aura" cx="50%" cy="50%" r="50%">
+      <stop offset="60%" style="stop-color:#ff4500;stop-opacity:0" />
+      <stop offset="100%" style="stop-color:#ff4500;stop-opacity:0.3" />
+    </radialGradient>
+    </defs>
+  
+  <!-- Background -->
+  <rect width="200" height="200" fill="url(#bg)"/>
+  
+  <!-- Aura Effect -->
+  <circle cx="100" cy="100" r="95" fill="url(#aura)"/>
+              <circle cx="180" cy="100" r="3" fill="#ff4500" opacity="0.5"/><circle cx="156.5685424949238" cy="156.5685424949238" r="3" fill="#ff4500" opacity="0.5"/><circle cx="100" cy="180" r="3" fill="#ff4500" opacity="0.5"/><circle cx="43.4314575050762" cy="156.5685424949238" r="3" fill="#ff4500" opacity="0.5"/><circle cx="20" cy="100.00000000000001" r="3" fill="#ff4500" opacity="0.5"/><circle cx="43.43145750507618" cy="43.4314575050762" r="3" fill="#ff4500" opacity="0.5"/><circle cx="99.99999999999999" cy="20" r="3" fill="#ff4500" opacity="0.5"/><circle cx="156.5685424949238" cy="43.43145750507618" r="3" fill="#ff4500" opacity="0.5"/>
+  
+  <!-- Body/Shoulders -->
+  
+      <path d="M50 165 Q45 175 40 200 L160 200 Q155 175 150 165 Q125 155 100 158 Q75 155 50 165" fill="#ff4500"/>
+      <path d="M75 165 Q100 185 125 165" fill="none" stroke="#ffd700" stroke-width="2"/>
+      <path d="M100 165 L100 200" stroke="#ffd700" stroke-width="1"/>
+      <circle cx="100" cy="175" r="4" fill="#ffd700"/>
+  
+  <!-- Neck -->
+  <path d="M85 150 Q100 145 115 150 L115 165 Q100 160 85 165 Z" fill="url(#skin)" filter="url(#shadow)"/>
+  
+  <!-- Ears (behind head) -->
+  
+        <ellipse cx="56" cy="95" rx="5" ry="8" fill="url(#skin)" stroke="#e1d2bf" stroke-width="1"/>
+        <ellipse cx="144" cy="95" rx="5" ry="8" fill="url(#skin)" stroke="#e1d2bf" stroke-width="1"/>
+  
+  <!-- Face -->
+  
+      <defs>
+        <filter id="celestialGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <ellipse cx="100" cy="95" rx="42" ry="50" fill="url(#skin)" filter="url(#shadow)"/>
+      <ellipse cx="100" cy="95" rx="40" ry="48" fill="none" stroke="#ffd700" stroke-width="1" opacity="0.3" filter="url(#celestialGlow)"/>
+  
+  <!-- Special Features (behind face details) -->
+  
+        <defs>
+          <filter id="haloGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <ellipse cx="100" cy="32" rx="38" ry="10" fill="#ffd700" opacity="0.15" filter="url(#haloGlow)"/>
+        <ellipse cx="100" cy="32" rx="35" ry="8" fill="none" stroke="#ffd700" stroke-width="4" opacity="0.9" filter="url(#haloGlow)"/>
+        <ellipse cx="100" cy="32" rx="35" ry="8" fill="none" stroke="#fff" stroke-width="2" opacity="0.6"/>
+        <ellipse cx="100" cy="32" rx="32" ry="6" fill="none" stroke="#fffacd" stroke-width="1" opacity="0.4"/>
+        <!-- Light rays -->
+        <path d="M100 20 L100 10" stroke="#ffd700" stroke-width="2" opacity="0.5"/>
+        <path d="M85 22 L80 14" stroke="#ffd700" stroke-width="1.5" opacity="0.4"/>
+        <path d="M115 22 L120 14" stroke="#ffd700" stroke-width="1.5" opacity="0.4"/>
+        <path d="M70 28 L62 24" stroke="#ffd700" stroke-width="1" opacity="0.3"/>
+        <path d="M130 28 L138 24" stroke="#ffd700" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Hair -->
+  
+    <path d="M50 70 Q45 40 70 30 Q100 20 130 30 Q155 40 150 70" fill="#f0f0f0"/>
+    <path d="M55 65 Q40 50 45 35" stroke="#f0f0f0" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M145 65 Q160 50 155 35" stroke="#f0f0f0" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M100 45 Q100 25 95 20" stroke="#f0f0f0" stroke-width="6" fill="none" stroke-linecap="round"/>
+  
+  <!-- Eyes -->
+  
+      <ellipse cx="82" cy="90" rx="8" ry="6" fill="#fff"/>
+      <ellipse cx="118" cy="90" rx="8" ry="6" fill="#fff"/>
+      <circle cx="82" cy="90" r="5" fill="#ffd700"/>
+      <circle cx="118" cy="90" r="5" fill="#ffd700"/>
+      <circle cx="82" cy="90" r="2" fill="#fff" opacity="0.7"/>
+      <circle cx="118" cy="90" r="2" fill="#fff" opacity="0.7"/>
+  
+  <!-- Nose & Mouth -->
+  
+      <path d="M100 95 Q102 105 100 112" fill="none" stroke="#d7c8b5" stroke-width="2"/>
+      <path d="M88 125 Q100 132 112 125" fill="none" stroke="#d7c8b5" stroke-width="2"/>
+  
+  <!-- Class Elements -->
+  <circle cx="175" cy="165" r="10" fill="#ff4500" opacity="0.6"/>
+               <circle cx="175" cy="165" r="5" fill="#ffd700"/>
+  
+  <!-- Frame -->
+  <rect x="5" y="5" width="190" height="190" fill="none" stroke="#ffd700" stroke-width="3" rx="10" opacity="0.5"/>
+</svg>
