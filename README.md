@@ -129,7 +129,7 @@ Command line flags:
 version: '3.8'
 services:
   character-sheets:
-    image: ghcr.io/jasoncabot/dicewizard-characters:latest
+    image: ghcr.io/jasoncabot/characters.dicewizard.net:main
     ports:
       - "8080:8080"
     volumes:
@@ -138,6 +138,33 @@ services:
       - JWT_SECRET=change-this-to-a-secure-random-string
       - DATABASE_PATH=/data/characters.db
     restart: unless-stopped
+```
+
+## TrueNAS Example
+
+```yaml
+services:
+  characters:
+    image: ghcr.io/jasoncabot/characters.dicewizard.net:main
+    environment:
+      JWT_SECRET: change-this-to-a-secure-random-string
+      DATABASE_PATH: /data/characters.db
+      PORT: '8080'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://0.0.0.0:8080/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - 8080:8080
+    read_only: false
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: '568:568'
+    volumes:
+      - /mnt/some/path:/data
 ```
 
 ## License
