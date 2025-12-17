@@ -1,7 +1,6 @@
 import type {
   Character,
   CharacterCreate,
-  CharacterUpdate,
   User,
   UserCreate,
   LoginResponse,
@@ -74,7 +73,7 @@ export const charactersApi = {
       body: JSON.stringify(data),
     }),
 
-  update: (id: number, data: CharacterUpdate): Promise<Character> =>
+  update: (id: number, data: Partial<CharacterCreate>): Promise<Character> =>
     request(`/characters/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
