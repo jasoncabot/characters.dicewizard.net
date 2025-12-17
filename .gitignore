@@ -33,3 +33,4 @@ Thumbs.db
 
 # Air (Go hot reload)
 tmp/
+assets

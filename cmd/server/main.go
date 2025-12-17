@@ -25,6 +25,7 @@ func main() {
 	// Flags
 	port := flag.String("port", getEnv("PORT", "8080"), "HTTP server port")
 	dbPath := flag.String("db", getEnv("DATABASE_PATH", "./data/characters.db"), "SQLite database path")
+	assetsPath := flag.String("assets", getEnv("ASSETS_PATH", "./assets"), "Assets base path (e.g. mounted volume)")
 	jwtSecret := flag.String("jwt-secret", "", "JWT secret key (required in production)")
 	migrateOnly := flag.Bool("migrate-only", false, "Run migrations and exit")
 	devMode := flag.Bool("dev", false, "Development mode (don't serve embedded frontend)")
@@ -44,6 +45,12 @@ func main() {
 	dbDir := filepath.Dir(*dbPath)
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		log.Fatalf("Failed to create database directory: %v", err)
+	}
+
+	// Ensure assets directory exists (and avatars subfolder)
+	avatarDir := filepath.Join(*assetsPath, "avatars")
+	if err := os.MkdirAll(avatarDir, 0755); err != nil {
+		log.Fatalf("Failed to create assets directory: %v", err)
 	}
 
 	// Initialize store
@@ -68,8 +75,8 @@ func main() {
 		return
 	}
 
-	// Create handler with JWT secret
-	handler := api.NewHandler(s, secret)
+	// Create handler with JWT secret and asset path
+	handler := api.NewHandler(s, secret, *assetsPath)
 
 	// Setup frontend filesystem
 	var frontendFS fs.FS
@@ -85,12 +92,13 @@ func main() {
 	}
 
 	// Create router
-	router := api.NewRouter(handler, frontendFS)
+	router := api.NewRouter(handler, frontendFS, *assetsPath)
 
 	// Start server
 	addr := fmt.Sprintf(":%s", *port)
 	log.Printf("Starting server on %s", addr)
 	log.Printf("Database: %s", *dbPath)
+	log.Printf("Assets: %s", *assetsPath)
 	if err := http.ListenAndServe(addr, router); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}

@@ -41,6 +41,7 @@ type Character struct {
 	Features  []string `json:"features"`
 	Equipment []string `json:"equipment"`
 	Notes     string   `json:"notes"`
+	AvatarURL string   `json:"avatarUrl"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"createdAt"`

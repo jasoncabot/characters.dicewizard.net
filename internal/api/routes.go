@@ -12,7 +12,7 @@ import (
 )
 
 // NewRouter creates a new chi router with all routes configured
-func NewRouter(h *Handler, frontendFS fs.FS) *chi.Mux {
+func NewRouter(h *Handler, frontendFS fs.FS, assetsPath string) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -62,9 +62,30 @@ func NewRouter(h *Handler, frontendFS fs.FS) *chi.Mux {
 			r.Post("/", h.CreateCharacter)
 			r.Get("/{id}", h.GetCharacter)
 			r.Put("/{id}", h.UpdateCharacter)
+			r.Post("/{id}/avatar", h.UploadCharacterAvatar)
 			r.Delete("/{id}", h.DeleteCharacter)
 		})
+
+		// Protected campaign routes
+		r.Route("/campaigns", func(r chi.Router) {
+			r.Use(h.AuthMiddleware)
+			r.Get("/", h.ListCampaigns)
+			r.Get("/details", h.ListCampaignDetails)
+			r.Post("/", h.CreateCampaign)
+			r.Put("/{id}", h.UpdateCampaign)
+			r.Post("/{id}/characters", h.AddCharacterToCampaign)
+		})
+
+		// Protected note routes
+		r.Route("/notes", func(r chi.Router) {
+			r.Use(h.AuthMiddleware)
+			r.Post("/", h.CreateNote)
+			r.Get("/search", h.SearchNotes)
+		})
 	})
+
+	// Serve uploaded assets
+	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsPath))))
 
 	// Serve frontend static files
 	if frontendFS != nil {

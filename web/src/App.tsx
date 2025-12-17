@@ -5,7 +5,9 @@ import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { LoginForm } from "./components/LoginForm";
 import { CharacterList } from "./components/CharacterList";
 import { CharacterSheet } from "./components/CharacterSheet";
+import { Campaigns } from "./components/Campaigns";
 import type { Character } from "./types/character";
+import { NotesCommandPalette } from "./components/NotesCommandPalette";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,7 +27,9 @@ function AppContent() {
     isNewUser,
     clearNewUserFlag,
   } = useAuth();
-  const [view, setView] = useState<"list" | "new" | "edit">("list");
+  const [view, setView] = useState<"list" | "new" | "edit" | "campaigns">(
+    "list",
+  );
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(
     null,
   );
@@ -54,6 +58,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <NotesCommandPalette />
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
@@ -62,6 +67,20 @@ function AppContent() {
             <h1 className="text-xl font-bold text-white">
               D&D Character Sheets
             </h1>
+            <div className="ml-6 flex gap-2">
+              <button
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${view === "list" || view === "new" || view === "edit" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-200 hover:bg-slate-700"}`}
+                onClick={() => setView("list")}
+              >
+                Characters
+              </button>
+              <button
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${view === "campaigns" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-200 hover:bg-slate-700"}`}
+                onClick={() => setView("campaigns")}
+              >
+                Campaigns
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <span className="cursor-default text-slate-400">
@@ -94,6 +113,8 @@ function AppContent() {
             }}
           />
         )}
+
+        {view === "campaigns" && <Campaigns />}
 
         {(view === "new" || view === "edit") && (
           <CharacterSheet

@@ -23,6 +23,7 @@ import {
   SPECIES_TRAITS,
   formatModifier,
 } from "../../types/character";
+import { useRef } from "react";
 import type { CharacterCreate } from "../../types/character";
 import {
   listboxButtonClasses,
@@ -41,6 +42,9 @@ interface BasicInfoSectionProps {
   proficiencyBonus: number;
   onClassChange?: (value: CharacterCreate["class"]) => void;
   onRaceChange?: (value: CharacterCreate["race"]) => void;
+  avatarUrl?: string;
+  onAvatarUpload?: (file: File) => void;
+  isUploadingAvatar?: boolean;
 }
 
 export function BasicInfoSection({
@@ -54,18 +58,53 @@ export function BasicInfoSection({
   proficiencyBonus,
   onClassChange,
   onRaceChange,
+  avatarUrl,
+  onAvatarUpload,
+  isUploadingAvatar,
 }: BasicInfoSectionProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const portraitSrc =
+    avatarUrl ||
+    `/portraits/${selectedRace.toLowerCase()}-${selectedClass.toLowerCase()}.svg`;
+
   return (
     <section className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-6 backdrop-blur-sm">
       <h2 className="mb-4 text-xl font-bold text-white">Basic Information</h2>
       <div className="flex flex-col gap-6 md:flex-row">
         <div className="flex flex-shrink-0 flex-col items-center">
-          <div className="h-40 w-40 overflow-hidden rounded-xl border-2 border-slate-600 bg-slate-900/50 shadow-lg">
+          <div className="relative h-40 w-40 overflow-hidden rounded-xl border-2 border-slate-600 bg-slate-900/50 shadow-lg">
             <img
-              src={`/portraits/${selectedRace.toLowerCase()}-${selectedClass.toLowerCase()}.svg`}
+              src={portraitSrc}
               alt={`${selectedRace} ${selectedClass}`}
               className="h-full w-full object-cover transition-all duration-300"
             />
+            {onAvatarUpload && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      onAvatarUpload(file);
+                    }
+                    if (event.target) {
+                      event.target.value = "";
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  className="absolute right-2 top-2 rounded-md bg-slate-900/80 px-2 py-1 text-xs font-semibold text-white shadow hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-70"
+                >
+                  {isUploadingAvatar ? "Uploading..." : "Edit"}
+                </button>
+              </>
+            )}
           </div>
           <p className="mt-2 text-center text-sm text-slate-400">
             {selectedRace} {selectedClass}

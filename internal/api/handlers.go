@@ -6,7 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -23,15 +27,17 @@ const userIDKey contextKey = "userID"
 
 // Handler holds the dependencies for HTTP handlers
 type Handler struct {
-	store     *store.Store
-	jwtSecret []byte
+	store      *store.Store
+	jwtSecret  []byte
+	assetsPath string
 }
 
 // NewHandler creates a new Handler
-func NewHandler(s *store.Store, jwtSecret string) *Handler {
+func NewHandler(s *store.Store, jwtSecret, assetsPath string) *Handler {
 	return &Handler{
-		store:     s,
-		jwtSecret: []byte(jwtSecret),
+		store:      s,
+		jwtSecret:  []byte(jwtSecret),
+		assetsPath: assetsPath,
 	}
 }
 
@@ -127,6 +133,194 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, user)
+}
+
+// Campaign handlers
+
+// ListCampaigns handles GET /api/campaigns
+func (h *Handler) ListCampaigns(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	campaigns, err := h.store.ListCampaigns(userID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if campaigns == nil {
+		campaigns = []*models.Campaign{}
+	}
+
+	respondJSON(w, http.StatusOK, campaigns)
+}
+
+// ListCampaignDetails handles GET /api/campaigns/details to include linked characters.
+func (h *Handler) ListCampaignDetails(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	details, err := h.store.ListCampaignDetails(userID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if details == nil {
+		details = []*models.CampaignDetail{}
+	}
+
+	respondJSON(w, http.StatusOK, details)
+}
+
+// CreateCampaign handles POST /api/campaigns
+func (h *Handler) CreateCampaign(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	var req models.CreateCampaignRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	campaign, err := h.store.CreateCampaign(userID, req.Name, req.Description, req.Visibility, req.Status)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, campaign)
+}
+
+// UpdateCampaign handles PUT /api/campaigns/{id}
+func (h *Handler) UpdateCampaign(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+
+	var req models.CreateCampaignRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	updated, err := h.store.UpdateCampaign(campaignID, userID, req.Name, req.Description, req.Visibility, req.Status)
+	if err != nil {
+		switch err {
+		case store.ErrCampaignNotFound:
+			respondError(w, http.StatusNotFound, err.Error())
+		case store.ErrNotCampaignMember, store.ErrNotPermitted:
+			respondError(w, http.StatusForbidden, err.Error())
+		case store.ErrInvalidCampaignStatus:
+			respondError(w, http.StatusBadRequest, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, updated)
+}
+
+// AddCharacterToCampaign handles POST /api/campaigns/{id}/characters
+func (h *Handler) AddCharacterToCampaign(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+
+	var req models.AddCharacterToCampaignRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	if req.CharacterID == 0 {
+		respondError(w, http.StatusBadRequest, "characterId is required")
+		return
+	}
+
+	link, err := h.store.AddCharacterToCampaign(campaignID, req.CharacterID, userID)
+	if err != nil {
+		switch err {
+		case store.ErrCampaignNotFound:
+			respondError(w, http.StatusNotFound, err.Error())
+		case store.ErrNotCampaignMember, store.ErrNotPermitted, store.ErrCharacterNotOwned:
+			respondError(w, http.StatusForbidden, err.Error())
+		case store.ErrCampaignCharacterExists:
+			respondError(w, http.StatusConflict, err.Error())
+		default:
+			respondError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, link)
+}
+
+// Note handlers
+
+// CreateNote handles POST /api/notes
+func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+
+	var req models.CreateNoteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if strings.TrimSpace(req.Body) == "" && strings.TrimSpace(req.Title) == "" {
+		respondError(w, http.StatusBadRequest, "Title or body is required")
+		return
+	}
+
+	note, err := h.store.CreateNote(userID, req.EntityType, req.EntityID, req.Title, req.Body)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, note)
+}
+
+// SearchNotes handles GET /api/notes/search
+func (h *Handler) SearchNotes(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	query := r.URL.Query()
+
+	q := query.Get("q")
+	entityType := query.Get("entityType")
+
+	var entityID *int64
+	if entityIDStr := query.Get("entityId"); entityIDStr != "" {
+		val, err := strconv.ParseInt(entityIDStr, 10, 64)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid entityId")
+			return
+		}
+		entityID = &val
+	}
+
+	limit := 20
+	if limitStr := query.Get("limit"); limitStr != "" {
+		if val, err := strconv.Atoi(limitStr); err == nil && val > 0 {
+			limit = val
+		}
+	}
+
+	results, err := h.store.SearchNotes(userID, q, entityType, entityID, limit)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if results == nil {
+		results = []*models.Note{}
+	}
+
+	respondJSON(w, http.StatusOK, results)
 }
 
 // Character handlers
@@ -226,6 +420,7 @@ func (h *Handler) UpdateCharacter(w http.ResponseWriter, r *http.Request) {
 	character.ID = id
 	character.UserID = userID
 	character.CreatedAt = existing.CreatedAt
+	character.AvatarURL = existing.AvatarURL
 
 	if err := h.store.UpdateCharacter(character); err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
@@ -251,6 +446,114 @@ func (h *Handler) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// UploadCharacterAvatar handles POST /api/characters/{id}/avatar
+func (h *Handler) UploadCharacterAvatar(w http.ResponseWriter, r *http.Request) {
+	const maxUploadSize = int64(5 << 20) // 5MB
+
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid character id")
+		return
+	}
+
+	// Ensure character exists and belongs to user
+	character, err := h.store.GetCharacter(id, userID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load character")
+		return
+	}
+	if character == nil {
+		respondError(w, http.StatusNotFound, "Character not found")
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid upload payload")
+		return
+	}
+
+	file, _, err := r.FormFile("avatar")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Avatar file is required")
+		return
+	}
+	defer file.Close()
+
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		respondError(w, http.StatusBadRequest, "Failed to read upload")
+		return
+	}
+	if n == 0 {
+		respondError(w, http.StatusBadRequest, "Empty file")
+		return
+	}
+
+	contentType := http.DetectContentType(buffer[:n])
+	extension := ""
+	switch contentType {
+	case "image/jpeg":
+		extension = ".jpg"
+	case "image/png":
+		extension = ".png"
+	case "image/webp":
+		extension = ".webp"
+	case "image/gif":
+		extension = ".gif"
+	default:
+		respondError(w, http.StatusBadRequest, "Unsupported file type")
+		return
+	}
+
+	fileName := fmt.Sprintf("char-%d-%d%s", id, time.Now().UnixNano(), extension)
+	avatarDir := filepath.Join(h.assetsPath, "avatars")
+	if err := os.MkdirAll(avatarDir, 0755); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to prepare assets directory")
+		return
+	}
+	filePath := filepath.Join(avatarDir, fileName)
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to save avatar")
+		return
+	}
+	defer dst.Close()
+
+	if _, err := dst.Write(buffer[:n]); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to write file")
+		return
+	}
+	if _, err := io.Copy(dst, file); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to write file")
+		return
+	}
+
+	avatarURL := fmt.Sprintf("/assets/avatars/%s", fileName)
+	updated, err := h.store.UpdateCharacterAvatar(id, userID, avatarURL)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to update avatar")
+		return
+	}
+
+	// Clean up previous avatar if present
+	if character.AvatarURL != "" {
+		oldPath := strings.TrimPrefix(character.AvatarURL, "/assets/")
+		if oldPath != "" {
+			clean := filepath.Clean(oldPath)
+			if rel, err := filepath.Rel(h.assetsPath, filepath.Join(h.assetsPath, clean)); err == nil && !strings.HasPrefix(rel, "..") {
+				_ = os.Remove(filepath.Join(h.assetsPath, clean))
+			}
+		}
+	}
+
+	respondJSON(w, http.StatusOK, updated)
 }
 
 // Auth middleware

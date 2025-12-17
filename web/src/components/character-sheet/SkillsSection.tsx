@@ -1,17 +1,17 @@
 import { Switch } from "@headlessui/react";
+import type React from "react";
 import {
   SKILLS,
   calculateModifier,
   formatModifier,
 } from "../../types/character";
+import type { SkillName } from "../../types/character";
 import type { AbilityScores } from "./types";
 
 interface SkillsSectionProps {
   abilityScores: AbilityScores;
-  skillProficiencies: string[];
-  setSkillProficiencies: (
-    updater: string[] | ((prev: string[]) => string[]),
-  ) => void;
+  skillProficiencies: SkillName[];
+  setSkillProficiencies: React.Dispatch<React.SetStateAction<SkillName[]>>;
   proficiencyBonus: number;
 }
 
@@ -21,7 +21,7 @@ export function SkillsSection({
   setSkillProficiencies,
   proficiencyBonus,
 }: SkillsSectionProps) {
-  const toggleProficiency = (skill: string, checked: boolean) => {
+  const toggleProficiency = (skill: SkillName, checked: boolean) => {
     if (checked) {
       setSkillProficiencies([...skillProficiencies, skill]);
       return;
@@ -36,7 +36,7 @@ export function SkillsSection({
       <h2 className="mb-4 text-xl font-bold text-white">Skills</h2>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
         {Object.entries(SKILLS).map(([skill, ability]) => {
-          const isProficient = skillProficiencies.includes(skill);
+          const isProficient = skillProficiencies.includes(skill as SkillName);
           const modifier = calculateModifier(abilityScores[ability]);
           const total = modifier + (isProficient ? proficiencyBonus : 0);
 
@@ -44,7 +44,9 @@ export function SkillsSection({
             <Switch
               key={skill}
               checked={isProficient}
-              onChange={(checked) => toggleProficiency(skill, checked)}
+              onChange={(checked) =>
+                toggleProficiency(skill as SkillName, checked)
+              }
               className={`group flex w-full cursor-pointer items-center gap-2 rounded-lg border p-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
                 isProficient
                   ? "border-purple-500/50 bg-purple-600/20"

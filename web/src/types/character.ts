@@ -4,11 +4,11 @@ export interface Character {
   id: number;
   user_id: number;
   name: string;
-  race: string; // Called "species" in 2024 rules, but keeping "race" for backwards compat
-  class: string;
+  race: Species; // Called "species" in 2024 rules, but keeping "race" for backwards compat
+  class: ClassName;
   level: number;
-  background: string;
-  alignment: string;
+  background: BackgroundName;
+  alignment: Alignment;
   experiencePoints: number;
 
   // Ability scores
@@ -28,11 +28,12 @@ export interface Character {
   hitDice: string;
 
   // Proficiencies (JSON arrays)
-  skillProficiencies: string[];
-  savingThrowProficiencies: string[];
+  skillProficiencies: SkillName[];
+  savingThrowProficiencies: Ability[];
   features: string[];
   equipment: string[];
   notes: string;
+  avatarUrl?: string;
 
   // Computed (from backend)
   strengthModifier: number;
@@ -51,11 +52,11 @@ export interface Character {
 
 export interface CharacterCreate {
   name: string;
-  race: string;
-  class: string;
+  race: Species;
+  class: ClassName;
   level: number;
-  background: string;
-  alignment: string;
+  background: BackgroundName;
+  alignment: Alignment;
   experiencePoints: number;
   strength: number;
   dexterity: number;
@@ -69,8 +70,8 @@ export interface CharacterCreate {
   armorClass: number;
   speed: number;
   hitDice: string;
-  skillProficiencies: string[];
-  savingThrowProficiencies: string[];
+  skillProficiencies: SkillName[];
+  savingThrowProficiencies: Ability[];
   features: string[];
   equipment: string[];
   notes: string;
@@ -122,7 +123,7 @@ export const ABILITY_DESCRIPTIONS: Record<Ability, string> = {
   charisma: "Force of personality, persuasion",
 };
 
-export const SKILLS: Record<string, Ability> = {
+export const SKILLS = {
   Acrobatics: "dexterity",
   "Animal Handling": "wisdom",
   Arcana: "intelligence",
@@ -141,7 +142,9 @@ export const SKILLS: Record<string, Ability> = {
   "Sleight of Hand": "dexterity",
   Stealth: "dexterity",
   Survival: "wisdom",
-};
+} as const satisfies Record<string, Ability>;
+
+export type SkillName = keyof typeof SKILLS;
 
 // 2024 Player's Handbook Species (formerly Races)
 export const SPECIES = [
@@ -155,16 +158,16 @@ export const SPECIES = [
   "Human",
   "Orc",
   "Tiefling",
-];
+] as const;
+export type Species = (typeof SPECIES)[number];
 
 // Keep RACES as alias for backwards compatibility
 export const RACES = SPECIES;
 
+export type CreatureSize = "Small" | "Medium";
+
 // Species traits for 2024 rules
-export const SPECIES_TRAITS: Record<
-  string,
-  { size: string; speed: number; traits: string[] }
-> = {
+export const SPECIES_TRAITS = {
   Aasimar: {
     size: "Medium",
     speed: 30,
@@ -230,7 +233,9 @@ export const SPECIES_TRAITS: Record<
     speed: 30,
     traits: ["Darkvision", "Fiendish Legacy", "Otherworldly Presence"],
   },
-};
+} as const satisfies Record<Species, { size: CreatureSize; speed: number; traits: readonly string[] }>;
+
+export type SpeciesTrait = (typeof SPECIES_TRAITS)[Species]["traits"][number];
 
 export const CLASSES = [
   "Barbarian",
@@ -245,7 +250,8 @@ export const CLASSES = [
   "Sorcerer",
   "Warlock",
   "Wizard",
-];
+] as const;
+export type ClassName = (typeof CLASSES)[number];
 
 // 2024 Backgrounds - each grants ability score increases, skill proficiencies, and a feat
 export const BACKGROUNDS = [
@@ -265,17 +271,11 @@ export const BACKGROUNDS = [
   "Scribe",
   "Soldier",
   "Wayfarer",
-];
+] as const;
+export type BackgroundName = (typeof BACKGROUNDS)[number];
 
 // Background details for 2024 rules
-export const BACKGROUND_DETAILS: Record<
-  string,
-  {
-    abilityScores: string;
-    skillProficiencies: string[];
-    feat: string;
-  }
-> = {
+export const BACKGROUND_DETAILS = {
   Acolyte: {
     abilityScores: "+2 Wis, +1 Int or +1 to three",
     skillProficiencies: ["Insight", "Religion"],
@@ -356,7 +356,14 @@ export const BACKGROUND_DETAILS: Record<
     skillProficiencies: ["Insight", "Stealth"],
     feat: "Lucky",
   },
-};
+} as const satisfies Record<
+  BackgroundName,
+  {
+    abilityScores: string;
+    skillProficiencies: readonly SkillName[];
+    feat: string;
+  }
+>;
 
 export const ALIGNMENTS = [
   "Lawful Good",
@@ -368,9 +375,10 @@ export const ALIGNMENTS = [
   "Lawful Evil",
   "Neutral Evil",
   "Chaotic Evil",
-];
+] as const;
+export type Alignment = (typeof ALIGNMENTS)[number];
 
-export const CLASS_HIT_DICE: Record<string, number> = {
+export const CLASS_HIT_DICE: Record<ClassName, number> = {
   Barbarian: 12,
   Fighter: 10,
   Paladin: 10,
@@ -386,7 +394,7 @@ export const CLASS_HIT_DICE: Record<string, number> = {
 };
 
 // Class saving throw proficiencies (2024 rules)
-export const CLASS_SAVING_THROWS: Record<string, Ability[]> = {
+export const CLASS_SAVING_THROWS: Record<ClassName, Ability[]> = {
   Barbarian: ["strength", "constitution"],
   Bard: ["dexterity", "charisma"],
   Cleric: ["wisdom", "charisma"],

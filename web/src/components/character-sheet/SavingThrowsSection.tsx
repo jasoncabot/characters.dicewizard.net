@@ -1,4 +1,5 @@
 import { Switch } from "@headlessui/react";
+import type React from "react";
 import {
   ABILITIES,
   calculateModifier,
@@ -9,10 +10,10 @@ import type { AbilityScores } from "./types";
 
 interface SavingThrowsSectionProps {
   abilityScores: AbilityScores;
-  savingThrowProficiencies: string[];
-  setSavingThrowProficiencies: (
-    updater: string[] | ((prev: string[]) => string[]),
-  ) => void;
+  savingThrowProficiencies: Ability[];
+  setSavingThrowProficiencies: React.Dispatch<
+    React.SetStateAction<Ability[]>
+  >;
   proficiencyBonus: number;
 }
 

@@ -3,7 +3,12 @@ import { useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@headlessui/react";
 import { charactersApi } from "../api/client";
-import type { Character, CharacterCreate, Ability } from "../types/character";
+import type {
+  Character,
+  CharacterCreate,
+  Ability,
+  SkillName,
+} from "../types/character";
 import {
   ABILITIES,
   CLASS_HIT_DICE,
@@ -75,12 +80,17 @@ export function CharacterSheet({
     { rolls: number[]; total: number }[]
   >([]);
 
+  const [avatarOverride, setAvatarOverride] = useState<{
+    characterId: number | null;
+    url: string;
+  }>({ characterId: character?.id ?? null, url: character?.avatarUrl || "" });
+
   // Proficiency state
-  const [skillProficiencies, setSkillProficiencies] = useState<string[]>(
+  const [skillProficiencies, setSkillProficiencies] = useState<SkillName[]>(
     character?.skillProficiencies ?? [],
   );
   const [savingThrowProficiencies, setSavingThrowProficiencies] = useState<
-    string[]
+    Ability[]
   >(
     character?.savingThrowProficiencies ??
       CLASS_SAVING_THROWS[character?.class ?? "Fighter"] ??
@@ -171,6 +181,11 @@ export function CharacterSheet({
       | CharacterCreate["alignment"]
       | undefined) || "True Neutral";
   const proficiencyBonus = calculateProficiencyBonus(level);
+  const currentCharacterId = character?.id ?? null;
+  const avatarUrl =
+    avatarOverride.characterId === currentCharacterId
+      ? avatarOverride.url || character?.avatarUrl || ""
+      : character?.avatarUrl || "";
 
   const applyStandardAssignments = useCallback(
     (assignments: Record<Ability, number | null>): AbilityScores => {
@@ -308,6 +323,22 @@ export function CharacterSheet({
     },
   });
 
+  const avatarUploadMutation = useMutation({
+    mutationFn: (file: File) => {
+      if (!character) {
+        throw new Error("Character not available for avatar upload");
+      }
+      return charactersApi.uploadAvatar(character.id, file);
+    },
+    onSuccess: (updated) => {
+      setAvatarOverride({
+        characterId: currentCharacterId,
+        url: updated.avatarUrl ?? "",
+      });
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+
   const onSubmit = (data: CharacterCreate) => {
     const payload: CharacterCreate = {
       ...data,
@@ -322,6 +353,14 @@ export function CharacterSheet({
       createMutation.mutate(payload);
     }
   };
+
+  const handleAvatarUpload = useCallback(
+    (file: File) => {
+      if (!character) return;
+      avatarUploadMutation.mutate(file);
+    },
+    [avatarUploadMutation, character],
+  );
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
   const error = createMutation.error || updateMutation.error;
@@ -353,6 +392,9 @@ export function CharacterSheet({
           proficiencyBonus={proficiencyBonus}
           onClassChange={handleClassSelection}
           onRaceChange={handleRaceSelection}
+          avatarUrl={avatarUrl}
+          onAvatarUpload={character ? handleAvatarUpload : undefined}
+          isUploadingAvatar={avatarUploadMutation.status === "pending"}
         />
 
         <AbilityScoresSection
