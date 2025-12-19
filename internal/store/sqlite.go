@@ -19,6 +19,10 @@ var ErrNotPermitted = errors.New("user is not permitted for this campaign")
 var ErrCharacterNotOwned = errors.New("character not owned by user")
 var ErrCampaignCharacterExists = errors.New("character already in campaign")
 var ErrInvalidCampaignStatus = errors.New("invalid campaign status")
+var ErrInviteNotFound = errors.New("invite not found")
+var ErrInviteExpired = errors.New("invite expired")
+var ErrInviteRedeemed = errors.New("invite already redeemed")
+var ErrAlreadyMember = errors.New("user is already a member")
 
 // Store provides database operations for characters
 type Store struct {
@@ -526,6 +530,35 @@ func (s *Store) UpdateCampaign(campaignID, userID int64, name, description, visi
 	return current, nil
 }
 
+// UpdateCampaignStatus updates only the status of a campaign with permissions.
+func (s *Store) UpdateCampaignStatus(campaignID, userID int64, status string) (*models.Campaign, error) {
+	if !isValidCampaignStatus(status) {
+		return nil, ErrInvalidCampaignStatus
+	}
+
+	role, memberStatus, err := s.getMembership(campaignID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if memberStatus != "accepted" || (role != "owner" && role != "editor") {
+		return nil, ErrNotPermitted
+	}
+
+	current, err := s.getCampaignByID(campaignID)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	if _, err := s.db.Exec(`UPDATE campaigns SET status = ?, updated_at = ? WHERE id = ?`, status, now, campaignID); err != nil {
+		return nil, fmt.Errorf("failed to update campaign status: %w", err)
+	}
+
+	current.Status = status
+	current.UpdatedAt = now
+	return current, nil
+}
+
 // AddCharacterToCampaign attaches a user's character to a campaign after membership and ownership checks.
 func (s *Store) AddCharacterToCampaign(campaignID, characterID, userID int64) (*models.CampaignCharacter, error) {
 	// Ensure campaign exists
@@ -573,6 +606,251 @@ func (s *Store) AddCharacterToCampaign(campaignID, characterID, userID int64) (*
 		CharacterID: characterID,
 		CreatedAt:   now,
 	}, nil
+}
+
+// CreateCampaignInvite generates an invite code for a campaign.
+func (s *Store) CreateCampaignInvite(campaignID, userID int64, roleDefault string, expiresAt time.Time) (*models.CampaignInvite, error) {
+	if roleDefault == "" {
+		roleDefault = "viewer"
+	}
+	if roleDefault != "viewer" && roleDefault != "editor" {
+		return nil, fmt.Errorf("invalid role default")
+	}
+	if expiresAt.Before(time.Now()) {
+		expiresAt = time.Now().Add(7 * 24 * time.Hour)
+	}
+
+	role, memberStatus, err := s.getMembership(campaignID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if memberStatus != "accepted" || (role != "owner" && role != "editor") {
+		return nil, ErrNotPermitted
+	}
+
+	code, err := s.generateUniqueInviteCode()
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	res, err := s.db.Exec(
+		`INSERT INTO campaign_invites (campaign_id, code, invited_by, role_default, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		campaignID, code, userID, roleDefault, expiresAt, now,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create invite: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get invite id: %w", err)
+	}
+
+	return &models.CampaignInvite{
+		ID:          id,
+		CampaignID:  campaignID,
+		Code:        code,
+		InvitedBy:   userID,
+		RoleDefault: roleDefault,
+		Status:      "active",
+		ExpiresAt:   expiresAt,
+		CreatedAt:   now,
+	}, nil
+}
+
+// AcceptInvite redeems an invite code and creates/updates membership.
+func (s *Store) AcceptInvite(code string, userID int64) (*models.Campaign, error) {
+	var inv models.CampaignInvite
+	var redeemedBy sql.NullInt64
+	var redeemedAt sql.NullTime
+
+	row := s.db.QueryRow(
+		`SELECT id, campaign_id, code, invited_by, role_default, status, expires_at, redeemed_by, redeemed_at, created_at
+		 FROM campaign_invites WHERE code = ?`, code)
+
+	if err := row.Scan(&inv.ID, &inv.CampaignID, &inv.Code, &inv.InvitedBy, &inv.RoleDefault, &inv.Status, &inv.ExpiresAt, &redeemedBy, &redeemedAt, &inv.CreatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrInviteNotFound
+		}
+		return nil, fmt.Errorf("failed to load invite: %w", err)
+	}
+
+	if inv.Status != "active" {
+		return nil, ErrInviteRedeemed
+	}
+	if time.Now().After(inv.ExpiresAt) {
+		return nil, ErrInviteExpired
+	}
+	if redeemedBy.Valid {
+		return nil, ErrInviteRedeemed
+	}
+
+	// Already member?
+	_, status, err := s.getMembership(inv.CampaignID, userID)
+	if err != nil && !errors.Is(err, ErrNotCampaignMember) {
+		return nil, err
+	}
+	if err == nil && status == "accepted" {
+		return nil, ErrAlreadyMember
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	now := time.Now()
+	if _, err := tx.Exec(`UPDATE campaign_invites SET redeemed_by = ?, redeemed_at = ? WHERE id = ?`, userID, now, inv.ID); err != nil {
+		return nil, fmt.Errorf("failed to mark invite redeemed: %w", err)
+	}
+
+	if err == ErrNotCampaignMember {
+		if _, err := tx.Exec(`INSERT INTO campaign_members (campaign_id, user_id, role, status, invited_by, created_at) VALUES (?, ?, ?, 'accepted', ?, ?)`, inv.CampaignID, userID, inv.RoleDefault, inv.InvitedBy, now); err != nil {
+			return nil, fmt.Errorf("failed to insert membership: %w", err)
+		}
+	} else {
+		if _, err := tx.Exec(`UPDATE campaign_members SET role = ?, status = 'accepted' WHERE campaign_id = ? AND user_id = ?`, inv.RoleDefault, inv.CampaignID, userID); err != nil {
+			return nil, fmt.Errorf("failed to update membership: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit invite acceptance: %w", err)
+	}
+
+	return s.getCampaignByID(inv.CampaignID)
+}
+
+func (s *Store) generateUniqueInviteCode() (string, error) {
+	for i := 0; i < 5; i++ {
+		code := randomCode(8)
+		var exists int
+		err := s.db.QueryRow(`SELECT 1 FROM campaign_invites WHERE code = ?`, code).Scan(&exists)
+		if err == sql.ErrNoRows {
+			return code, nil
+		}
+		if err != nil && err != sql.ErrNoRows {
+			return "", fmt.Errorf("failed to check invite code: %w", err)
+		}
+	}
+	return "", fmt.Errorf("could not generate unique invite code")
+}
+
+// ListCampaignMembers returns member summaries if requester is a member.
+func (s *Store) ListCampaignMembers(campaignID, userID int64) ([]*models.CampaignMemberSummary, error) {
+	if _, _, err := s.getMembership(campaignID, userID); err != nil {
+		return nil, err
+	}
+
+	rows, err := s.db.Query(
+		`SELECT m.id, m.campaign_id, m.user_id, u.username, m.role, m.status, m.invited_by, m.created_at
+		 FROM campaign_members m
+		 JOIN users u ON u.id = m.user_id
+		 WHERE m.campaign_id = ?
+		 ORDER BY m.created_at ASC`,
+		campaignID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list members: %w", err)
+	}
+	defer rows.Close()
+
+	var members []*models.CampaignMemberSummary
+	for rows.Next() {
+		var m models.CampaignMemberSummary
+		var invitedBy sql.NullInt64
+		if err := rows.Scan(&m.ID, &m.CampaignID, &m.UserID, &m.Username, &m.Role, &m.Status, &invitedBy, &m.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan member: %w", err)
+		}
+		if invitedBy.Valid {
+			m.InvitedBy = &invitedBy.Int64
+		}
+		members = append(members, &m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating members: %w", err)
+	}
+
+	return members, nil
+}
+
+// UpdateMemberRole changes a member role if permitted.
+func (s *Store) UpdateMemberRole(campaignID, targetUserID, actorUserID int64, role string) (*models.CampaignMemberSummary, error) {
+	if role != "owner" && role != "editor" && role != "viewer" {
+		return nil, fmt.Errorf("invalid role")
+	}
+
+	actorRole, actorStatus, err := s.getMembership(campaignID, actorUserID)
+	if err != nil {
+		return nil, err
+	}
+	if actorStatus != "accepted" || (actorRole != "owner" && actorRole != "editor") {
+		return nil, ErrNotPermitted
+	}
+
+	// Prevent demoting an owner by non-owner
+	targetRole, _, err := s.getMembership(campaignID, targetUserID)
+	if err != nil {
+		return nil, err
+	}
+	if targetRole == "owner" && actorRole != "owner" {
+		return nil, ErrNotPermitted
+	}
+
+	if _, err := s.db.Exec(`UPDATE campaign_members SET role = ? WHERE campaign_id = ? AND user_id = ?`, role, campaignID, targetUserID); err != nil {
+		return nil, fmt.Errorf("failed to update role: %w", err)
+	}
+
+	return s.getMemberSummary(campaignID, targetUserID)
+}
+
+// RevokeMember sets status to revoked (non-owner targets only).
+func (s *Store) RevokeMember(campaignID, targetUserID, actorUserID int64) error {
+	actorRole, actorStatus, err := s.getMembership(campaignID, actorUserID)
+	if err != nil {
+		return err
+	}
+	if actorStatus != "accepted" || (actorRole != "owner" && actorRole != "editor") {
+		return ErrNotPermitted
+	}
+
+	targetRole, _, err := s.getMembership(campaignID, targetUserID)
+	if err != nil {
+		return err
+	}
+	if targetRole == "owner" {
+		return ErrNotPermitted
+	}
+
+	if _, err := s.db.Exec(`UPDATE campaign_members SET status = 'revoked' WHERE campaign_id = ? AND user_id = ?`, campaignID, targetUserID); err != nil {
+		return fmt.Errorf("failed to revoke member: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Store) getMemberSummary(campaignID, userID int64) (*models.CampaignMemberSummary, error) {
+	var m models.CampaignMemberSummary
+	var invitedBy sql.NullInt64
+	row := s.db.QueryRow(
+		`SELECT m.id, m.campaign_id, m.user_id, u.username, m.role, m.status, m.invited_by, m.created_at
+		 FROM campaign_members m JOIN users u ON u.id = m.user_id
+		 WHERE m.campaign_id = ? AND m.user_id = ?`,
+		campaignID, userID,
+	)
+	if err := row.Scan(&m.ID, &m.CampaignID, &m.UserID, &m.Username, &m.Role, &m.Status, &invitedBy, &m.CreatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotCampaignMember
+		}
+		return nil, fmt.Errorf("failed to scan member: %w", err)
+	}
+	if invitedBy.Valid {
+		m.InvitedBy = &invitedBy.Int64
+	}
+	return &m, nil
 }
 
 func (s *Store) getCampaignOwner(campaignID int64) (int64, error) {
@@ -844,4 +1122,13 @@ func buildFTSQuery(input string) string {
 	}
 
 	return strings.Join(terms, " AND ")
+}
+
+func randomCode(length int) string {
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = alphabet[int(time.Now().UnixNano()+int64(i))%len(alphabet)]
+	}
+	return string(b)
 }

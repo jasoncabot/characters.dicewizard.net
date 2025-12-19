@@ -26,8 +26,18 @@ Concise design notes for LLMs: entities, states, and data flow around campaigns.
 - ListCampaigns joins campaign_members where status = accepted for user.
 - AddCharacterToCampaign: checks campaign exists, membership role ∈ {owner, editor}, status accepted, character belongs to requesting user; inserts into campaign_characters unique per campaign.
 
-## Status Handling (planned)
-- Campaign.status enum proposal: `not_started`, `in_progress`, `paused`, `ended`. Default `not_started`. Transitions manual via UI/API later.
+## Status Handling (implemented)
+- Campaign.status enum: `not_started`, `in_progress`, `paused`, `ended`, `archived`. Default `not_started`.
+- API: `PUT /api/campaigns/{id}/status` (auth, owner/editor) updates status only. UI dropdown uses this.
+
+## Campaign onboarding and lifecycle (in progress)
+- Smooth create + invite: create campaign, then generate shareable code. Default invite role: `viewer`, promotable to `editor`.
+- Invite flow (API implemented):
+	- `POST /api/campaigns/{id}/invites` (owner/editor) -> returns code, role_default, expires_at.
+	- `POST /api/campaigns/invites/{code}/accept` (auth) -> inserts/updates campaign_member to accepted with role_default; rejects expired/redeemed/duplicate.
+- Invite storage (implemented): table `campaign_invites` (code unique, campaign_id, invited_by, role_default viewer|editor, status active|revoked, expires_at, redeemed_by/at).
+- Frontend cues (partial): campaign cards have status dropdown (driven by status endpoint) and an Invite button that generates + shows copyable code. Future: invite modal, member list, inline alerts when someone joins.
+- Validation/guards: owner/editor only to create invites; codes expire server-side; duplicate accepted membership blocked.
 
 ## Notes Design Options
 1) Polymorphic via owner_id + owner_type (`campaign|scene|character|user|standalone`) + optional foreign keys per type for referential integrity.

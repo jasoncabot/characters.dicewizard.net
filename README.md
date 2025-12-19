@@ -145,26 +145,33 @@ services:
 ```yaml
 services:
   characters:
-    image: ghcr.io/jasoncabot/characters.dicewizard.net:main
     environment:
-      JWT_SECRET: change-this-to-a-secure-random-string
+      ASSETS_PATH: /assets
       DATABASE_PATH: /data/characters.db
+      JWT_SECRET: some-secure-random-string
       PORT: '8080'
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://0.0.0.0:8080/health']
       interval: 30s
-      timeout: 5s
       retries: 5
       start_period: 30s
+      test:
+        - CMD
+        - wget
+        - '-q'
+        - '--spider'
+        - http://0.0.0.0:8080/health
+      timeout: 5s
+    image: ghcr.io/jasoncabot/characters.dicewizard.net:main
     ports:
       - 8080:8080
-    read_only: false
+    read_only: False
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
     user: '568:568'
     volumes:
-      - /mnt/some/path:/data
+      - /mnt/some/path/data:/data
+      - /mnt/some/path/assets:/assets
 ```
 
 ## License

@@ -40,6 +40,37 @@ type CampaignMember struct {
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
+// CampaignMemberSummary adds username for UI.
+type CampaignMemberSummary struct {
+	ID         int64     `json:"id"`
+	CampaignID int64     `json:"campaignId"`
+	UserID     int64     `json:"userId"`
+	Username   string    `json:"username"`
+	Role       string    `json:"role"`
+	Status     string    `json:"status"`
+	InvitedBy  *int64    `json:"invitedBy,omitempty"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
+// CampaignInvite represents an invitation code to join a campaign.
+type CampaignInvite struct {
+	ID          int64      `json:"id"`
+	CampaignID  int64      `json:"campaignId"`
+	Code        string     `json:"code"`
+	InvitedBy   int64      `json:"invitedBy"`
+	RoleDefault string     `json:"roleDefault"`
+	Status      string     `json:"status"`
+	ExpiresAt   time.Time  `json:"expiresAt"`
+	RedeemedBy  *int64     `json:"redeemedBy,omitempty"`
+	RedeemedAt  *time.Time `json:"redeemedAt,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+}
+
+type CreateCampaignInviteRequest struct {
+	RoleDefault string    `json:"roleDefault"`
+	ExpiresAt   time.Time `json:"expiresAt"`
+}
+
 // CampaignCharacter links a character to a campaign (many-to-many).
 type CampaignCharacter struct {
 	ID          int64     `json:"id"`

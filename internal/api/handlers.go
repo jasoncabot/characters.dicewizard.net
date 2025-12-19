@@ -25,6 +25,8 @@ type contextKey string
 
 const userIDKey contextKey = "userID"
 
+const uploadMountPath = "/uploads"
+
 // Handler holds the dependencies for HTTP handlers
 type Handler struct {
 	store      *store.Store
@@ -221,6 +223,42 @@ func (h *Handler) UpdateCampaign(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, updated)
 }
 
+// UpdateCampaignStatus handles PUT /api/campaigns/{id}/status
+func (h *Handler) UpdateCampaignStatus(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+
+	var payload struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	updated, err := h.store.UpdateCampaignStatus(campaignID, userID, payload.Status)
+	if err != nil {
+		switch err {
+		case store.ErrCampaignNotFound:
+			respondError(w, http.StatusNotFound, err.Error())
+		case store.ErrNotPermitted, store.ErrNotCampaignMember:
+			respondError(w, http.StatusForbidden, err.Error())
+		case store.ErrInvalidCampaignStatus:
+			respondError(w, http.StatusBadRequest, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, updated)
+}
+
 // AddCharacterToCampaign handles POST /api/campaigns/{id}/characters
 func (h *Handler) AddCharacterToCampaign(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
@@ -257,6 +295,141 @@ func (h *Handler) AddCharacterToCampaign(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondJSON(w, http.StatusCreated, link)
+}
+
+// CreateCampaignInvite handles POST /api/campaigns/{id}/invites
+func (h *Handler) CreateCampaignInvite(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+
+	var req models.CreateCampaignInviteRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	inv, err := h.store.CreateCampaignInvite(campaignID, userID, req.RoleDefault, req.ExpiresAt)
+	if err != nil {
+		switch err {
+		case store.ErrNotPermitted, store.ErrNotCampaignMember:
+			respondError(w, http.StatusForbidden, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, inv)
+}
+
+// AcceptCampaignInvite handles POST /api/campaigns/invites/{code}/accept
+func (h *Handler) AcceptCampaignInvite(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	code := chi.URLParam(r, "code")
+
+	campaign, err := h.store.AcceptInvite(code, userID)
+	if err != nil {
+		switch err {
+		case store.ErrInviteNotFound:
+			respondError(w, http.StatusNotFound, err.Error())
+		case store.ErrInviteExpired, store.ErrInviteRedeemed, store.ErrAlreadyMember:
+			respondError(w, http.StatusBadRequest, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, campaign)
+}
+
+// ListCampaignMembers handles GET /api/campaigns/{id}/members
+func (h *Handler) ListCampaignMembers(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+
+	members, err := h.store.ListCampaignMembers(campaignID, userID)
+	if err != nil {
+		switch err {
+		case store.ErrNotCampaignMember:
+			respondError(w, http.StatusForbidden, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, members)
+}
+
+// UpdateCampaignMemberRole handles PUT /api/campaigns/{id}/members/{userId}/role
+func (h *Handler) UpdateCampaignMemberRole(w http.ResponseWriter, r *http.Request) {
+	actorID := getUserID(r)
+	campaignID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+	targetID, err := strconv.ParseInt(chi.URLParam(r, "userId"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid user id")
+		return
+	}
+
+	var payload struct {
+		Role string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	m, err := h.store.UpdateMemberRole(campaignID, targetID, actorID, payload.Role)
+	if err != nil {
+		switch err {
+		case store.ErrNotPermitted, store.ErrNotCampaignMember:
+			respondError(w, http.StatusForbidden, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, m)
+}
+
+// RevokeCampaignMember handles POST /api/campaigns/{id}/members/{userId}/revoke
+func (h *Handler) RevokeCampaignMember(w http.ResponseWriter, r *http.Request) {
+	actorID := getUserID(r)
+	campaignID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+	targetID, err := strconv.ParseInt(chi.URLParam(r, "userId"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid user id")
+		return
+	}
+
+	if err := h.store.RevokeMember(campaignID, targetID, actorID); err != nil {
+		switch err {
+		case store.ErrNotPermitted, store.ErrNotCampaignMember:
+			respondError(w, http.StatusForbidden, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Note handlers
@@ -535,20 +708,21 @@ func (h *Handler) UploadCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	avatarURL := fmt.Sprintf("/assets/avatars/%s", fileName)
+	avatarURL := fmt.Sprintf("%s/avatars/%s", uploadMountPath, fileName)
 	updated, err := h.store.UpdateCharacterAvatar(id, userID, avatarURL)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to update avatar")
 		return
 	}
 
-	// Clean up previous avatar if present
-	if character.AvatarURL != "" {
-		oldPath := strings.TrimPrefix(character.AvatarURL, "/assets/")
+	// Clean up previous avatar if present (only new uploads path is supported)
+	if character.AvatarURL != "" && strings.HasPrefix(character.AvatarURL, uploadMountPath+"/") {
+		oldPath := strings.TrimPrefix(character.AvatarURL, uploadMountPath+"/")
 		if oldPath != "" {
 			clean := filepath.Clean(oldPath)
-			if rel, err := filepath.Rel(h.assetsPath, filepath.Join(h.assetsPath, clean)); err == nil && !strings.HasPrefix(rel, "..") {
-				_ = os.Remove(filepath.Join(h.assetsPath, clean))
+			target := filepath.Join(h.assetsPath, clean)
+			if rel, err := filepath.Rel(h.assetsPath, target); err == nil && !strings.HasPrefix(rel, "..") {
+				_ = os.Remove(target)
 			}
 		}
 	}

@@ -73,7 +73,18 @@ func NewRouter(h *Handler, frontendFS fs.FS, assetsPath string) *chi.Mux {
 			r.Get("/details", h.ListCampaignDetails)
 			r.Post("/", h.CreateCampaign)
 			r.Put("/{id}", h.UpdateCampaign)
+			r.Put("/{id}/status", h.UpdateCampaignStatus)
 			r.Post("/{id}/characters", h.AddCharacterToCampaign)
+			r.Post("/{id}/invites", h.CreateCampaignInvite)
+			r.Get("/{id}/members", h.ListCampaignMembers)
+			r.Put("/{id}/members/{userId}/role", h.UpdateCampaignMemberRole)
+			r.Post("/{id}/members/{userId}/revoke", h.RevokeCampaignMember)
+		})
+
+		// Public invite accept (auth required)
+		r.Group(func(r chi.Router) {
+			r.Use(h.AuthMiddleware)
+			r.Post("/campaigns/invites/{code}/accept", h.AcceptCampaignInvite)
 		})
 
 		// Protected note routes
@@ -84,8 +95,8 @@ func NewRouter(h *Handler, frontendFS fs.FS, assetsPath string) *chi.Mux {
 		})
 	})
 
-	// Serve uploaded assets
-	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsPath))))
+	// Serve uploaded assets from a dedicated mount to avoid clashing with built frontend assets
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir(assetsPath))))
 
 	// Serve frontend static files
 	if frontendFS != nil {

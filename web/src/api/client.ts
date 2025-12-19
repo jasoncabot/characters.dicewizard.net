@@ -151,6 +151,44 @@ export const campaignsApi = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+
+  updateStatus: (campaignId: number, status: string): Promise<Campaign> =>
+    request(`/campaigns/${campaignId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    }),
+
+  createInvite: (
+    campaignId: number,
+    payload: { roleDefault?: "viewer" | "editor"; expiresAt?: string },
+  ): Promise<{ code: string; expiresAt: string; roleDefault: string }> =>
+    request(`/campaigns/${campaignId}/invites`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  acceptInvite: (code: string): Promise<Campaign> =>
+    request(`/campaigns/invites/${code}/accept`, {
+      method: "POST",
+    }),
+
+  listMembers: (campaignId: number) =>
+    request<{ id: number; campaignId: number; userId: number; username: string; role: string; status: string; createdAt: string; invitedBy?: number | null }[]>(`/campaigns/${campaignId}/members`),
+
+  updateMemberRole: (
+    campaignId: number,
+    userId: number,
+    role: "viewer" | "editor" | "owner",
+  ) =>
+    request(`/campaigns/${campaignId}/members/${userId}/role`, {
+      method: "PUT",
+      body: JSON.stringify({ role }),
+    }),
+
+  revokeMember: (campaignId: number, userId: number) =>
+    request(`/campaigns/${campaignId}/members/${userId}/revoke`, {
+      method: "POST",
+    }),
 };
 
 // Notes API
