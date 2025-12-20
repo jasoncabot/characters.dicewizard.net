@@ -1,4 +1,11 @@
-export type NoteEntityType = "general" | "campaign" | "character" | "npc" | "map" | "handout" | "other";
+export type NoteEntityType =
+  | "general"
+  | "campaign"
+  | "character"
+  | "npc"
+  | "map"
+  | "handout"
+  | "other";
 
 export interface Note {
   id: number;

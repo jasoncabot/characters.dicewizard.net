@@ -121,61 +121,61 @@ export function CharacterList({ onSelect, onNew }: CharacterListProps) {
   return (
     <>
       <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="cursor-default text-2xl font-bold text-white">
-          Your Characters
-        </h2>
-        <Button
-          onClick={onNew}
-          className="flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 font-semibold text-white shadow-lg transition hover:from-purple-500 hover:to-pink-500 hover:shadow-purple-500/25 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none active:scale-95"
-        >
-          <span>+</span> New Character
-        </Button>
-      </div>
-
-      {characters?.length === 0 ? (
-        <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 py-12 text-center">
-          <div className="mb-4 text-6xl">🎭</div>
-          <h3 className="mb-2 text-xl font-semibold text-white">
-            No characters yet
-          </h3>
-          <p className="mb-6 text-slate-400">
-            Create your first character to begin your adventure!
-          </p>
+        <div className="flex items-center justify-between">
+          <h2 className="cursor-default text-2xl font-bold text-white">
+            Your Characters
+          </h2>
           <Button
             onClick={onNew}
-            className="cursor-pointer rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition hover:from-purple-500 hover:to-pink-500 hover:shadow-purple-500/25 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none active:scale-95"
+            className="flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 font-semibold text-white shadow-lg transition hover:from-purple-500 hover:to-pink-500 hover:shadow-purple-500/25 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none active:scale-95"
           >
-            Create Character
+            <span>+</span> New Character
           </Button>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {characters?.map((character) => (
-            <CharacterCard
-              key={character.id}
-              character={character}
-              onSelect={() => onSelect(character)}
-              onAddToCampaign={() => {
-                setSelectedCharacter(character);
-                setAddModalOpen(true);
-                setFeedback(null);
-                if (campaigns && campaigns.length > 0) {
-                  setSelectedCampaignId(campaigns[0].id);
-                }
-              }}
-              onDelete={() => {
-                if (
-                  confirm("Are you sure you want to delete this character?")
-                ) {
-                  deleteMutation.mutate(character.id);
-                }
-              }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+
+        {characters?.length === 0 ? (
+          <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 py-12 text-center">
+            <div className="mb-4 text-6xl">🎭</div>
+            <h3 className="mb-2 text-xl font-semibold text-white">
+              No characters yet
+            </h3>
+            <p className="mb-6 text-slate-400">
+              Create your first character to begin your adventure!
+            </p>
+            <Button
+              onClick={onNew}
+              className="cursor-pointer rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition hover:from-purple-500 hover:to-pink-500 hover:shadow-purple-500/25 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none active:scale-95"
+            >
+              Create Character
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {characters?.map((character) => (
+              <CharacterCard
+                key={character.id}
+                character={character}
+                onSelect={() => onSelect(character)}
+                onAddToCampaign={() => {
+                  setSelectedCharacter(character);
+                  setAddModalOpen(true);
+                  setFeedback(null);
+                  if (campaigns && campaigns.length > 0) {
+                    setSelectedCampaignId(campaigns[0].id);
+                  }
+                }}
+                onDelete={() => {
+                  if (
+                    confirm("Are you sure you want to delete this character?")
+                  ) {
+                    deleteMutation.mutate(character.id);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <AddToCampaignModal
         open={addModalOpen}
@@ -218,7 +218,12 @@ function CharacterCard({
     <div
       onClick={onSelect}
       onKeyDown={(e) => {
-        if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (
+          e.key.toLowerCase() === "n" &&
+          !e.metaKey &&
+          !e.ctrlKey &&
+          !e.altKey
+        ) {
           e.preventDefault();
           e.stopPropagation();
           openNotePalette({
@@ -238,10 +243,10 @@ function CharacterCard({
         <div className="flex-shrink-0">
           <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-600 bg-slate-900/50">
             <img
-        src={
-          character.avatarUrl ||
-          `/portraits/${character.race.toLowerCase()}-${character.class.toLowerCase()}.svg`
-        }
+              src={
+                character.avatarUrl ||
+                `/portraits/${character.race.toLowerCase()}-${character.class.toLowerCase()}.svg`
+              }
               alt={`${character.race} ${character.class}`}
               className="h-full w-full object-cover"
             />
@@ -267,11 +272,11 @@ function CharacterCard({
               >
                 ☰
               </MenuButton>
-              <MenuItems className="absolute right-0 mt-2 w-44 origin-top-right rounded-md border border-slate-700/70 bg-slate-800/95 p-1 shadow-lg focus:outline-none">
+              <MenuItems className="absolute right-0 mt-2 max-h-[70vh] w-44 origin-top-right overflow-auto overscroll-contain rounded-md border border-slate-700/70 bg-slate-800/95 p-1 shadow-lg focus:outline-none">
                 <MenuItem>
                   {({ active }) => (
                     <button
-                      className={`flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left text-sm font-medium ${active ? "bg-slate-700 text-white" : "text-slate-200"}`}
+                      className={`flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left text-sm font-medium transition ${active ? "bg-slate-700 text-white" : "text-slate-200 hover:bg-slate-700/70"}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onAddToCampaign();
@@ -284,7 +289,7 @@ function CharacterCard({
                 <MenuItem>
                   {({ active }) => (
                     <button
-                      className={`flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left text-sm font-medium ${active ? "bg-slate-700 text-red-200" : "text-red-300"}`}
+                      className={`flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left text-sm font-medium transition ${active ? "bg-slate-700 text-red-200" : "text-red-300 hover:bg-slate-700/70"}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onDelete();
@@ -377,6 +382,13 @@ function AddToCampaignModal({
       className={`${open ? "fixed" : "hidden"} inset-0 z-50 flex items-center justify-center bg-black/60 p-4`}
       role="dialog"
       aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div className="w-full max-w-lg rounded-xl border border-slate-700/70 bg-slate-900/90 p-5 shadow-2xl backdrop-blur">
         <div className="flex items-start justify-between">
@@ -387,11 +399,11 @@ function AddToCampaignModal({
             )}
           </div>
           <button
-            className="text-slate-400 hover:text-white"
+            className="cursor-pointer rounded p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Close dialog"
           >
-            ✕
+            ×
           </button>
         </div>
 
@@ -399,7 +411,7 @@ function AddToCampaignModal({
           <div>
             <label className="text-sm text-slate-300">Existing campaign</label>
             <select
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white focus:border-purple-400 focus:outline-none"
+              className="mt-1 w-full cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white focus:border-purple-400 focus:outline-none"
               value={selectedCampaignId ?? ""}
               onChange={(e) => {
                 const v = e.target.value;
@@ -419,7 +431,7 @@ function AddToCampaignModal({
           <div>
             <label className="text-sm text-slate-300">Or create new</label>
             <input
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white focus:border-purple-400 focus:outline-none"
+              className="mt-1 w-full cursor-text rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white focus:border-purple-400 focus:outline-none"
               placeholder="New campaign name"
               value={newCampaignName}
               onChange={(e) => onChangeNewCampaignName(e.target.value)}
@@ -427,7 +439,9 @@ function AddToCampaignModal({
           </div>
 
           <p className="text-xs text-slate-500">
-            Tip: leave "create new" empty to use the selected campaign. If you enter a new name, we'll create it as private and attach this character.
+            Tip: leave "create new" empty to use the selected campaign. If you
+            enter a new name, we'll create it as private and attach this
+            character.
           </p>
 
           {feedback && (
@@ -440,7 +454,7 @@ function AddToCampaignModal({
         <div className="mt-5 flex justify-end gap-2">
           <Button
             onClick={onClose}
-            className="cursor-pointer rounded-lg bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700"
+            className="cursor-pointer rounded-lg bg-slate-800 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-700"
           >
             Cancel
           </Button>

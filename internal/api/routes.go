@@ -71,14 +71,29 @@ func NewRouter(h *Handler, frontendFS fs.FS, assetsPath string) *chi.Mux {
 			r.Use(h.AuthMiddleware)
 			r.Get("/", h.ListCampaigns)
 			r.Get("/details", h.ListCampaignDetails)
+			r.Get("/{id}/full", h.GetCampaignFull)
 			r.Post("/", h.CreateCampaign)
 			r.Put("/{id}", h.UpdateCampaign)
 			r.Put("/{id}/status", h.UpdateCampaignStatus)
 			r.Post("/{id}/characters", h.AddCharacterToCampaign)
 			r.Post("/{id}/invites", h.CreateCampaignInvite)
+			r.Post("/{id}/maps", h.UploadCampaignMap)
+			r.Post("/{id}/handouts", h.UploadCampaignHandout)
 			r.Get("/{id}/members", h.ListCampaignMembers)
 			r.Put("/{id}/members/{userId}/role", h.UpdateCampaignMemberRole)
 			r.Post("/{id}/members/{userId}/revoke", h.RevokeCampaignMember)
+		})
+
+		// Map-scoped routes
+		r.Route("/maps", func(r chi.Router) {
+			r.Use(h.AuthMiddleware)
+			r.Post("/{id}/tokens", h.CreateMapToken)
+		})
+
+		// Token routes
+		r.Route("/tokens", func(r chi.Router) {
+			r.Use(h.AuthMiddleware)
+			r.Put("/{id}/position", h.UpdateTokenPosition)
 		})
 
 		// Public invite accept (auth required)

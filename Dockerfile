@@ -7,7 +7,7 @@ COPY web/ ./
 RUN npm run build
 
 # Build Go binary
-FROM golang:1.24-alpine AS backend
+FROM golang:1.25-alpine3.23 AS backend
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -17,7 +17,7 @@ COPY --from=frontend /app/web/dist ./cmd/server/web/dist
 RUN CGO_ENABLED=0 go build -o server ./cmd/server
 
 # Final image
-FROM alpine:3.20
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=backend /app/server /app/server

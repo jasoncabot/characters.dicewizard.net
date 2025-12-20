@@ -10,6 +10,7 @@ import type {
   CampaignCharacter,
   CampaignCreate,
   CampaignDetail,
+  CampaignFull,
 } from "../types/campaign";
 import type { Note, NoteCreatePayload } from "../types/note";
 
@@ -111,10 +112,10 @@ export const charactersApi = {
     }),
 
   uploadAvatar: (id: number, file: File): Promise<Character> => {
-		const formData = new FormData();
-		formData.append("avatar", file);
-		return requestForm(`/characters/${id}/avatar`, formData);
-	},
+    const formData = new FormData();
+    formData.append("avatar", file);
+    return requestForm(`/characters/${id}/avatar`, formData);
+  },
 
   delete: (id: number): Promise<void> =>
     request(`/characters/${id}`, {
@@ -143,6 +144,9 @@ export const campaignsApi = {
 
   listDetails: (): Promise<CampaignDetail[]> => request("/campaigns/details"),
 
+  getFull: (campaignId: number): Promise<CampaignFull> =>
+    request(`/campaigns/${campaignId}/full`),
+
   update: (
     campaignId: number,
     data: Partial<CampaignCreate>,
@@ -167,13 +171,72 @@ export const campaignsApi = {
       body: JSON.stringify(payload),
     }),
 
+  uploadMap: (campaignId: number, file: File, name?: string) => {
+    const formData = new FormData();
+    formData.append("map", file);
+    if (name) formData.append("name", name);
+    return requestForm(`/campaigns/${campaignId}/maps`, formData);
+  },
+
+  uploadHandout: (
+    campaignId: number,
+    file: File,
+    title?: string,
+    description?: string,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (title) formData.append("title", title);
+    if (description) formData.append("description", description);
+    return requestForm(`/campaigns/${campaignId}/handouts`, formData);
+  },
+
+  createToken: (
+    mapId: number,
+    payload: {
+      characterId?: number;
+      label: string;
+      imageUrl?: string;
+      sizeSquares?: number;
+      positionX?: number;
+      positionY?: number;
+      facingDeg?: number;
+      audience?: string[];
+      tags?: string[];
+    },
+  ) =>
+    request(`/maps/${mapId}/tokens`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  updateTokenPosition: (
+    tokenId: number,
+    payload: { positionX: number; positionY: number },
+  ) =>
+    request(`/tokens/${tokenId}/position`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+
   acceptInvite: (code: string): Promise<Campaign> =>
     request(`/campaigns/invites/${code}/accept`, {
       method: "POST",
     }),
 
   listMembers: (campaignId: number) =>
-    request<{ id: number; campaignId: number; userId: number; username: string; role: string; status: string; createdAt: string; invitedBy?: number | null }[]>(`/campaigns/${campaignId}/members`),
+    request<
+      {
+        id: number;
+        campaignId: number;
+        userId: number;
+        username: string;
+        role: string;
+        status: string;
+        createdAt: string;
+        invitedBy?: number | null;
+      }[]
+    >(`/campaigns/${campaignId}/members`),
 
   updateMemberRole: (
     campaignId: number,
@@ -193,16 +256,19 @@ export const campaignsApi = {
 
 // Notes API
 export const notesApi = {
-  search: (params: {
-    q?: string;
-    entityType?: string;
-    entityId?: number;
-    limit?: number;
-  } = {}): Promise<Note[]> => {
+  search: (
+    params: {
+      q?: string;
+      entityType?: string;
+      entityId?: number;
+      limit?: number;
+    } = {},
+  ): Promise<Note[]> => {
     const qs = new URLSearchParams();
     if (params.q) qs.set("q", params.q);
     if (params.entityType) qs.set("entityType", params.entityType);
-    if (typeof params.entityId === "number") qs.set("entityId", String(params.entityId));
+    if (typeof params.entityId === "number")
+      qs.set("entityId", String(params.entityId));
     if (params.limit) qs.set("limit", String(params.limit));
 
     const suffix = qs.toString() ? `?${qs.toString()}` : "";

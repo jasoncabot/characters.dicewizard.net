@@ -15,9 +15,6 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-//go:embed migrations/*.sql
-var embedMigrations embed.FS
-
 //go:embed web/dist
 var embedFrontend embed.FS
 
@@ -61,7 +58,7 @@ func main() {
 	defer s.Close()
 
 	// Run migrations
-	goose.SetBaseFS(embedMigrations)
+	goose.SetBaseFS(store.Migrations)
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		log.Fatalf("Failed to set dialect: %v", err)
 	}

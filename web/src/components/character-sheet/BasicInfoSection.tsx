@@ -99,7 +99,7 @@ export function BasicInfoSection({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploadingAvatar}
-                  className="absolute right-2 top-2 rounded-md bg-slate-900/80 px-2 py-1 text-xs font-semibold text-white shadow hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-70"
+                  className="absolute top-2 right-2 rounded-md bg-slate-900/80 px-2 py-1 text-xs font-semibold text-white shadow hover:bg-slate-800 focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:opacity-70"
                 >
                   {isUploadingAvatar ? "Uploading..." : "Edit"}
                 </button>

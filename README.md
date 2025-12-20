@@ -31,7 +31,7 @@ Access the app at http://localhost:8080
 ### Building from Source
 
 Prerequisites:
-- Go 1.24+
+- Go 1.25+
 - Node.js 22+
 - npm
 
@@ -173,6 +173,23 @@ services:
       - /mnt/some/path/data:/data
       - /mnt/some/path/assets:/assets
 ```
+
+## Release & Deploy
+
+To cut a release and publish images:
+
+```bash
+# Pick a SemVer tag and push it
+make release VERSION=v1.2.3
+
+# The GitHub Action builds and pushes tags:
+# - 1.2.3 (exact)
+# - 1.2   (major.minor)
+# - latest (for releases only)
+# - sha    (immutable)
+```
+
+Point your deployment (e.g., TrueNAS) at the tag you prefer: the exact `v1.2.3`/`1.2.3` for immutability, the floating `1.2` for patch updates, or `latest` for the newest release.
 
 ## License
 

@@ -259,6 +259,286 @@ func (h *Handler) UpdateCampaignStatus(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, updated)
 }
 
+// GetCampaignFull handles GET /api/campaigns/{id}/full and returns maps/tokens/handouts.
+func (h *Handler) GetCampaignFull(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+
+	full, err := h.store.GetCampaignFull(campaignID, userID)
+	if err != nil {
+		switch err {
+		case store.ErrNotCampaignMember, store.ErrNotPermitted:
+			respondError(w, http.StatusForbidden, err.Error())
+		case store.ErrCampaignNotFound:
+			respondError(w, http.StatusNotFound, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, full)
+}
+
+// UploadCampaignMap handles POST /api/campaigns/{id}/maps for map image upload.
+func (h *Handler) UploadCampaignMap(w http.ResponseWriter, r *http.Request) {
+	const maxUploadSize = int64(20 << 20) // 20MB maps
+
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid upload payload")
+		return
+	}
+
+	file, header, err := r.FormFile("map")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Map file is required")
+		return
+	}
+	defer file.Close()
+
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		respondError(w, http.StatusBadRequest, "Failed to read upload")
+		return
+	}
+	if n == 0 {
+		respondError(w, http.StatusBadRequest, "Empty file")
+		return
+	}
+
+	contentType := http.DetectContentType(buffer[:n])
+	ext := extensionForAsset(contentType)
+	if ext == "" {
+		respondError(w, http.StatusBadRequest, "Unsupported file type")
+		return
+	}
+
+	fileName := fmt.Sprintf("camp-%d-map-%d%s", campaignID, time.Now().UnixNano(), ext)
+	dir := filepath.Join(h.assetsPath, "campaigns", fmt.Sprintf("%d", campaignID), "maps")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to prepare assets directory")
+		return
+	}
+	filePath := filepath.Join(dir, fileName)
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to save map")
+		return
+	}
+	defer dst.Close()
+
+	if _, err := dst.Write(buffer[:n]); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to write file")
+		return
+	}
+	if _, err := io.Copy(dst, file); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to write file")
+		return
+	}
+
+	mapURL := fmt.Sprintf("%s/campaigns/%d/maps/%s", uploadMountPath, campaignID, fileName)
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" && header != nil {
+		name = header.Filename
+	}
+	if name == "" {
+		name = "Map"
+	}
+
+	created, err := h.store.CreateMapForCampaign(campaignID, userID, name, mapURL)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, created)
+}
+
+// CreateMapToken handles POST /api/maps/{id}/tokens
+func (h *Handler) CreateMapToken(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	mapIDStr := chi.URLParam(r, "id")
+	mapID, err := strconv.ParseInt(mapIDStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid map id")
+		return
+	}
+
+	var req struct {
+		CharacterID *int64   `json:"characterId"`
+		Label       string   `json:"label"`
+		ImageURL    string   `json:"imageUrl"`
+		SizeSquares int      `json:"sizeSquares"`
+		PositionX   int      `json:"positionX"`
+		PositionY   int      `json:"positionY"`
+		FacingDeg   int      `json:"facingDeg"`
+		Audience    []string `json:"audience"`
+		Tags        []string `json:"tags"`
+		Layer       string   `json:"layer"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if strings.TrimSpace(req.Label) == "" {
+		respondError(w, http.StatusBadRequest, "Label is required")
+		return
+	}
+
+	token, err := h.store.CreateToken(mapID, userID, req.CharacterID, req.Label, req.ImageURL, req.SizeSquares, req.PositionX, req.PositionY, req.FacingDeg, req.Audience, req.Tags, req.Layer)
+	if err != nil {
+		switch err {
+		case store.ErrNotPermitted, store.ErrNotCampaignMember:
+			respondError(w, http.StatusForbidden, err.Error())
+		case store.ErrCampaignMapNotFound:
+			respondError(w, http.StatusNotFound, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, token)
+}
+
+// UpdateTokenPosition handles PUT /api/tokens/{id}/position
+func (h *Handler) UpdateTokenPosition(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	tokenID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid token id")
+		return
+	}
+
+	var req struct {
+		PositionX int `json:"positionX"`
+		PositionY int `json:"positionY"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	token, err := h.store.UpdateTokenPosition(tokenID, userID, req.PositionX, req.PositionY)
+	if err != nil {
+		switch err {
+		case store.ErrTokenNotFound:
+			respondError(w, http.StatusNotFound, err.Error())
+		case store.ErrNotPermitted, store.ErrNotCampaignMember:
+			respondError(w, http.StatusForbidden, err.Error())
+		default:
+			respondError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	respondJSON(w, http.StatusOK, token)
+}
+
+// UploadCampaignHandout handles POST /api/campaigns/{id}/handouts with file upload.
+func (h *Handler) UploadCampaignHandout(w http.ResponseWriter, r *http.Request) {
+	const maxUploadSize = int64(20 << 20) // 20MB
+
+	userID := getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid campaign id")
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid upload payload")
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "File is required")
+		return
+	}
+	defer file.Close()
+
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		respondError(w, http.StatusBadRequest, "Failed to read upload")
+		return
+	}
+	if n == 0 {
+		respondError(w, http.StatusBadRequest, "Empty file")
+		return
+	}
+
+	contentType := http.DetectContentType(buffer[:n])
+	ext := extensionForAsset(contentType)
+	if ext == "" {
+		respondError(w, http.StatusBadRequest, "Unsupported file type")
+		return
+	}
+
+	fileName := fmt.Sprintf("camp-%d-handout-%d%s", campaignID, time.Now().UnixNano(), ext)
+	dir := filepath.Join(h.assetsPath, "campaigns", fmt.Sprintf("%d", campaignID), "handouts")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to prepare assets directory")
+		return
+	}
+	filePath := filepath.Join(dir, fileName)
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to save handout")
+		return
+	}
+	defer dst.Close()
+
+	if _, err := dst.Write(buffer[:n]); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to write file")
+		return
+	}
+	if _, err := io.Copy(dst, file); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to write file")
+		return
+	}
+
+	fileURL := fmt.Sprintf("%s/campaigns/%d/handouts/%s", uploadMountPath, campaignID, fileName)
+	title := strings.TrimSpace(r.FormValue("title"))
+	description := strings.TrimSpace(r.FormValue("description"))
+	if title == "" && header != nil {
+		title = header.Filename
+	}
+	if title == "" {
+		title = "Handout"
+	}
+
+	created, err := h.store.CreateCampaignHandout(campaignID, userID, title, description, fileURL)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, created)
+}
+
 // AddCharacterToCampaign handles POST /api/campaigns/{id}/characters
 func (h *Handler) AddCharacterToCampaign(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
@@ -438,7 +718,7 @@ func (h *Handler) RevokeCampaignMember(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 
-	var req models.CreateNoteRequest
+	var req CreateNoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
@@ -490,7 +770,7 @@ func (h *Handler) SearchNotes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if results == nil {
-		results = []*models.Note{}
+		results = []*store.NoteWithScore{}
 	}
 
 	respondJSON(w, http.StatusOK, results)
@@ -508,7 +788,7 @@ func (h *Handler) ListCharacters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if characters == nil {
-		characters = []*models.Character{}
+		characters = []*store.CharacterWithStats{}
 	}
 
 	respondJSON(w, http.StatusOK, characters)
@@ -541,7 +821,7 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 // CreateCharacter handles POST /api/characters
 func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
-	var req models.CreateCharacterRequest
+	var req CreateCharacterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
@@ -552,15 +832,15 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	character := req.ToCharacter()
-	character.UserID = userID
+	storeChar := req.ToStoreCharacter()
+	storeChar.UserID = userID
 
-	if err := h.store.CreateCharacter(character); err != nil {
+	if err := h.store.CreateCharacter(storeChar); err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, character)
+	respondJSON(w, http.StatusCreated, storeChar)
 }
 
 // UpdateCharacter handles PUT /api/characters/{id}
@@ -583,24 +863,24 @@ func (h *Handler) UpdateCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.CreateCharacterRequest
+	var req CreateCharacterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	character := req.ToCharacter()
-	character.ID = id
-	character.UserID = userID
-	character.CreatedAt = existing.CreatedAt
-	character.AvatarURL = existing.AvatarURL
+	storeChar := req.ToStoreCharacter()
+	storeChar.ID = id
+	storeChar.UserID = userID
+	storeChar.CreatedAt = existing.CreatedAt
+	storeChar.AvatarUrl = existing.AvatarUrl
 
-	if err := h.store.UpdateCharacter(character); err != nil {
+	if err := h.store.UpdateCharacter(storeChar); err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondJSON(w, http.StatusOK, character)
+	respondJSON(w, http.StatusOK, storeChar)
 }
 
 // DeleteCharacter handles DELETE /api/characters/{id}
@@ -716,8 +996,8 @@ func (h *Handler) UploadCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Clean up previous avatar if present (only new uploads path is supported)
-	if character.AvatarURL != "" && strings.HasPrefix(character.AvatarURL, uploadMountPath+"/") {
-		oldPath := strings.TrimPrefix(character.AvatarURL, uploadMountPath+"/")
+	if character.AvatarUrl != "" && strings.HasPrefix(character.AvatarUrl, uploadMountPath+"/") {
+		oldPath := strings.TrimPrefix(character.AvatarUrl, uploadMountPath+"/")
 		if oldPath != "" {
 			clean := filepath.Clean(oldPath)
 			target := filepath.Join(h.assetsPath, clean)
@@ -757,6 +1037,24 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 }
 
 // Helper functions
+
+func extensionForAsset(contentType string) string {
+	switch contentType {
+	case "image/jpeg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	case "image/webp":
+		return ".webp"
+	case "image/gif":
+		return ".gif"
+	case "application/pdf":
+		return ".pdf"
+	default:
+		return ""
+	}
+}
+
 func getUserID(r *http.Request) int64 {
 	if id, ok := r.Context().Value(userIDKey).(int64); ok {
 		return id

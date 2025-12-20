@@ -19,14 +19,15 @@ const (
 
 // Campaign represents a shared world for multiple characters and scenes.
 type Campaign struct {
-	ID          int64     `json:"id"`
-	OwnerID     int64     `json:"ownerId"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Visibility  string    `json:"visibility"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID            int64     `json:"id"`
+	OwnerID       int64     `json:"ownerId"`
+	Name          string    `json:"name"`
+	Description   string    `json:"description"`
+	Visibility    string    `json:"visibility"`
+	Status        string    `json:"status"`
+	ActiveSceneID *int64    `json:"activeSceneId"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
 // CampaignMember captures a user's role inside a campaign.
@@ -120,6 +121,7 @@ type Token struct {
 	Audience    []string  `json:"audience"`
 	Tags        []string  `json:"tags"`
 	Notes       string    `json:"notes"`
+	Layer       string    `json:"layer"`
 	CreatedBy   *int64    `json:"createdBy"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
@@ -148,10 +150,44 @@ type CampaignCharacterSummary struct {
 	OwnerUsername  string `json:"ownerUsername"`
 }
 
+// CampaignHandout represents an uploaded file or note for a campaign.
+type CampaignHandout struct {
+	ID          int64     `json:"id"`
+	CampaignID  int64     `json:"campaignId"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	FileURL     string    `json:"fileUrl"`
+	CreatedBy   int64     `json:"createdBy"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
 // CampaignDetail augments a campaign with attached characters.
 type CampaignDetail struct {
 	Campaign
 	Characters []CampaignCharacterSummary `json:"characters"`
+}
+
+// MapWithTokens groups tokens for a map for easy UI consumption.
+type MapWithTokens struct {
+	Map
+	Tokens []Token `json:"tokens"`
+}
+
+// SceneWithMaps groups maps for a scene.
+type SceneWithMaps struct {
+	Scene
+	Maps []MapWithTokens `json:"maps"`
+}
+
+// CampaignFull includes members, maps, and handouts for a single campaign view.
+type CampaignFull struct {
+	Campaign
+	Role       string                     `json:"role"`
+	Characters []CampaignCharacterSummary `json:"characters"`
+	Members    []CampaignMemberSummary    `json:"members"`
+	Scenes     []SceneWithMaps            `json:"scenes"`
+	Handouts   []CampaignHandout          `json:"handouts"`
 }
 
 // Default starter tags for tokens.

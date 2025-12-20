@@ -11,9 +11,7 @@ import type { AbilityScores } from "./types";
 interface SavingThrowsSectionProps {
   abilityScores: AbilityScores;
   savingThrowProficiencies: Ability[];
-  setSavingThrowProficiencies: React.Dispatch<
-    React.SetStateAction<Ability[]>
-  >;
+  setSavingThrowProficiencies: React.Dispatch<React.SetStateAction<Ability[]>>;
   proficiencyBonus: number;
 }
 

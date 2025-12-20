@@ -1,7 +1,6 @@
 package store
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -19,9 +18,11 @@ func setupTestStore(t *testing.T) *Store {
 		t.Fatalf("failed to open store: %v", err)
 	}
 
-	goose.SetDialect("sqlite3")
-	goose.SetBaseFS(os.DirFS("../../cmd/server/migrations"))
-	if err := goose.Up(s.DB(), "."); err != nil {
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		t.Fatalf("set dialect: %v", err)
+	}
+	goose.SetBaseFS(Migrations)
+	if err := goose.Up(s.DB(), "migrations"); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 
@@ -38,18 +39,20 @@ func TestMigrationsUpDownUp(t *testing.T) {
 	}
 	defer s.Close()
 
-	goose.SetDialect("sqlite3")
-	goose.SetBaseFS(os.DirFS("../../cmd/server/migrations"))
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		t.Fatalf("set dialect: %v", err)
+	}
+	goose.SetBaseFS(Migrations)
 
-	if err := goose.Up(s.DB(), "."); err != nil {
+	if err := goose.Up(s.DB(), "migrations"); err != nil {
 		t.Fatalf("initial up failed: %v", err)
 	}
 
-	if err := goose.Reset(s.DB(), "."); err != nil {
+	if err := goose.Reset(s.DB(), "migrations"); err != nil {
 		t.Fatalf("reset (down to 0) failed: %v", err)
 	}
 
-	if err := goose.Up(s.DB(), "."); err != nil {
+	if err := goose.Up(s.DB(), "migrations"); err != nil {
 		t.Fatalf("second up failed: %v", err)
 	}
 }
@@ -63,18 +66,20 @@ func TestAddCharacterToCampaign_AllowsOwnerEditor(t *testing.T) {
 		t.Fatalf("create user: %v", err)
 	}
 
-	character := &models.Character{
-		UserID:   owner.ID,
-		Name:     "Hero",
-		Race:     "Human",
-		Class:    "Fighter",
-		Level:    1,
-		Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10,
-		MaxHP: 10, CurrentHP: 10, ArmorClass: 10, Speed: 30, HitDice: "1d8",
-		SkillProficiencies:       []string{},
-		SavingThrowProficiencies: []string{},
-		Features:                 []string{},
-		Equipment:                []string{},
+	character := &CharacterWithStats{
+		CharacterModel: CharacterModel{
+			UserID:   owner.ID,
+			Name:     "Hero",
+			Race:     "Human",
+			Class:    "Fighter",
+			Level:    1,
+			Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10,
+			MaxHp: 10, CurrentHp: 10, ArmorClass: 10, Speed: 30, HitDice: "1d8",
+			SkillProficiencies:       "[]",
+			SavingThrowProficiencies: "[]",
+			Features:                 "[]",
+			Equipment:                "[]",
+		},
 	}
 
 	if err := s.CreateCharacter(character); err != nil {
@@ -103,18 +108,20 @@ func TestAddCharacterToCampaign_ViewerForbidden(t *testing.T) {
 	owner, _ := s.CreateUser("owner", "hash")
 	viewer, _ := s.CreateUser("viewer", "hash")
 
-	character := &models.Character{
-		UserID:   owner.ID,
-		Name:     "Hero",
-		Race:     "Human",
-		Class:    "Fighter",
-		Level:    1,
-		Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10,
-		MaxHP: 10, CurrentHP: 10, ArmorClass: 10, Speed: 30, HitDice: "1d8",
-		SkillProficiencies:       []string{},
-		SavingThrowProficiencies: []string{},
-		Features:                 []string{},
-		Equipment:                []string{},
+	character := &CharacterWithStats{
+		CharacterModel: CharacterModel{
+			UserID:   owner.ID,
+			Name:     "Hero",
+			Race:     "Human",
+			Class:    "Fighter",
+			Level:    1,
+			Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10,
+			MaxHp: 10, CurrentHp: 10, ArmorClass: 10, Speed: 30, HitDice: "1d8",
+			SkillProficiencies:       "[]",
+			SavingThrowProficiencies: "[]",
+			Features:                 "[]",
+			Equipment:                "[]",
+		},
 	}
 	_ = s.CreateCharacter(character)
 
@@ -139,18 +146,20 @@ func TestAddCharacterToCampaign_OwnershipRequired(t *testing.T) {
 
 	campaign, _ := s.CreateCampaign(owner.ID, "Test Campaign", "", models.CampaignVisibilityPrivate, models.CampaignStatusNotStarted)
 
-	foreignChar := &models.Character{
-		UserID:   other.ID,
-		Name:     "Rogue",
-		Race:     "Human",
-		Class:    "Rogue",
-		Level:    1,
-		Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10,
-		MaxHP: 10, CurrentHP: 10, ArmorClass: 10, Speed: 30, HitDice: "1d8",
-		SkillProficiencies:       []string{},
-		SavingThrowProficiencies: []string{},
-		Features:                 []string{},
-		Equipment:                []string{},
+	foreignChar := &CharacterWithStats{
+		CharacterModel: CharacterModel{
+			UserID:   other.ID,
+			Name:     "Rogue",
+			Race:     "Human",
+			Class:    "Rogue",
+			Level:    1,
+			Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10,
+			MaxHp: 10, CurrentHp: 10, ArmorClass: 10, Speed: 30, HitDice: "1d8",
+			SkillProficiencies:       "[]",
+			SavingThrowProficiencies: "[]",
+			Features:                 "[]",
+			Equipment:                "[]",
+		},
 	}
 	_ = s.CreateCharacter(foreignChar)
 

@@ -18,7 +18,11 @@ function isTypingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el) return false;
   const tag = el.tagName?.toLowerCase();
-  return tag === "input" || tag === "textarea" || el.getAttribute("contenteditable") === "true";
+  return (
+    tag === "input" ||
+    tag === "textarea" ||
+    el.getAttribute("contenteditable") === "true"
+  );
 }
 
 export function NotesCommandPalette() {
@@ -30,7 +34,8 @@ export function NotesCommandPalette() {
   const [entityId, setEntityId] = useState("");
   const [body, setBody] = useState("");
   const [title, setTitle] = useState("");
-  const [createEntityType, setCreateEntityType] = useState<NoteEntityType>("general");
+  const [createEntityType, setCreateEntityType] =
+    useState<NoteEntityType>("general");
   const [createEntityId, setCreateEntityId] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -66,7 +71,8 @@ export function NotesCommandPalette() {
     };
 
     window.addEventListener("open-note-palette", handler as EventListener);
-    return () => window.removeEventListener("open-note-palette", handler as EventListener);
+    return () =>
+      window.removeEventListener("open-note-palette", handler as EventListener);
   }, []);
 
   // Hotkeys to open/close
@@ -81,7 +87,12 @@ export function NotesCommandPalette() {
         return;
       }
 
-      if ((e.key === "n" || e.key === "N") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (
+        (e.key === "n" || e.key === "N") &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
         setMode("create");
         setOpen(true);
@@ -146,7 +157,10 @@ export function NotesCommandPalette() {
     mutationFn: () => {
       const trimmed = createEntityId.trim();
       const numericId = trimmed ? Number(trimmed) : undefined;
-      const safeId = numericId !== undefined && Number.isNaN(numericId) ? undefined : numericId;
+      const safeId =
+        numericId !== undefined && Number.isNaN(numericId)
+          ? undefined
+          : numericId;
 
       return notesApi.create({
         body,
@@ -191,13 +205,13 @@ export function NotesCommandPalette() {
         <div className="flex items-center justify-between">
           <div className="flex gap-2 rounded-full bg-slate-800/80 p-1 text-sm font-semibold">
             <button
-              className={`rounded-full px-3 py-1 transition ${mode === "search" ? "bg-purple-600 text-white" : "text-slate-300 hover:bg-slate-700"}`}
+              className={`cursor-pointer rounded-full px-3 py-1 transition ${mode === "search" ? "bg-purple-600 text-white" : "text-slate-300 hover:bg-slate-700"}`}
               onClick={() => setMode("search")}
             >
               Search ( / )
             </button>
             <button
-              className={`rounded-full px-3 py-1 transition ${mode === "create" ? "bg-purple-600 text-white" : "text-slate-300 hover:bg-slate-700"}`}
+              className={`cursor-pointer rounded-full px-3 py-1 transition ${mode === "create" ? "bg-purple-600 text-white" : "text-slate-300 hover:bg-slate-700"}`}
               onClick={() => setMode("create")}
             >
               New Note ( n )
@@ -205,7 +219,7 @@ export function NotesCommandPalette() {
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="rounded-lg px-3 py-1 text-sm text-slate-400 transition hover:bg-slate-800 hover:text-white"
+            className="cursor-pointer rounded-lg px-3 py-1 text-sm text-slate-400 transition hover:bg-slate-800 hover:text-white"
           >
             Esc
           </button>
@@ -219,25 +233,29 @@ export function NotesCommandPalette() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search notes by text..."
-                className="h-12 flex-1 rounded-xl border border-slate-700 bg-slate-800/80 px-4 text-lg text-white placeholder:text-slate-500 focus:border-purple-500 focus:outline-none"
+                className="h-12 flex-1 cursor-text rounded-xl border border-slate-700 bg-slate-800/80 px-4 text-lg text-white transition placeholder:text-slate-500 hover:border-slate-600 focus:border-purple-500 focus:outline-none"
               />
               <select
                 value={entityFilter}
-                onChange={(e) => setEntityFilter(e.target.value as NoteEntityType)}
-                className="h-12 rounded-xl border border-slate-700 bg-slate-800/80 px-3 text-sm text-white focus:border-purple-500 focus:outline-none"
+                onChange={(e) =>
+                  setEntityFilter(e.target.value as NoteEntityType)
+                }
+                className="h-12 cursor-pointer rounded-xl border border-slate-700 bg-slate-800/80 px-3 text-sm text-white transition hover:border-slate-600 focus:border-purple-500 focus:outline-none"
               >
                 <option value="general">Any type</option>
-                {ENTITY_OPTIONS.filter((o) => o.value !== "general").map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
+                {ENTITY_OPTIONS.filter((o) => o.value !== "general").map(
+                  (opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ),
+                )}
               </select>
               <input
                 value={entityId}
                 onChange={(e) => setEntityId(e.target.value)}
                 placeholder="Entity id (optional)"
-                className="h-12 w-40 rounded-xl border border-slate-700 bg-slate-800/80 px-3 text-sm text-white placeholder:text-slate-500 focus:border-purple-500 focus:outline-none"
+                className="h-12 w-40 cursor-text rounded-xl border border-slate-700 bg-slate-800/80 px-3 text-sm text-white transition placeholder:text-slate-500 hover:border-slate-600 focus:border-purple-500 focus:outline-none"
               />
             </div>
 
@@ -246,7 +264,9 @@ export function NotesCommandPalette() {
                 <div className="p-4 text-sm text-slate-400">Searching...</div>
               )}
               {searchError && (
-                <div className="p-4 text-sm text-red-300">Search failed. Try another query.</div>
+                <div className="p-4 text-sm text-red-300">
+                  Search failed. Try another query.
+                </div>
               )}
               {!isFetching && !searchError && searchResults.length === 0 && (
                 <div className="p-6 text-center text-sm text-slate-400">
@@ -265,7 +285,9 @@ export function NotesCommandPalette() {
                           {entityLabel(note.entityType)}
                         </span>
                         {note.entityId && (
-                          <span className="text-xs text-slate-400">ID #{note.entityId}</span>
+                          <span className="text-xs text-slate-400">
+                            ID #{note.entityId}
+                          </span>
                         )}
                       </div>
                       <div className="mt-1 text-base font-semibold text-white">
@@ -289,11 +311,13 @@ export function NotesCommandPalette() {
           <div className="mt-5 space-y-3">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="md:col-span-2">
-                <label className="text-sm text-slate-300">Title (optional)</label>
+                <label className="text-sm text-slate-300">
+                  Title (optional)
+                </label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-white focus:border-purple-500 focus:outline-none"
+                  className="mt-1 w-full cursor-text rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-white transition hover:border-slate-600 focus:border-purple-500 focus:outline-none"
                   placeholder="Quick session note"
                 />
               </div>
@@ -301,8 +325,10 @@ export function NotesCommandPalette() {
                 <label className="text-sm text-slate-300">Entity type</label>
                 <select
                   value={createEntityType}
-                  onChange={(e) => setCreateEntityType(e.target.value as NoteEntityType)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-white focus:border-purple-500 focus:outline-none"
+                  onChange={(e) =>
+                    setCreateEntityType(e.target.value as NoteEntityType)
+                  }
+                  className="mt-1 w-full cursor-pointer rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-white transition hover:border-slate-600 focus:border-purple-500 focus:outline-none"
                 >
                   {ENTITY_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -321,7 +347,7 @@ export function NotesCommandPalette() {
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={5}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-white focus:border-purple-500 focus:outline-none"
+                  className="mt-1 w-full cursor-text rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-white transition hover:border-slate-600 focus:border-purple-500 focus:outline-none"
                   placeholder="Type a note and press Cmd+Enter to save"
                   onKeyDown={(e) => {
                     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -333,22 +359,27 @@ export function NotesCommandPalette() {
                 />
               </div>
               <div>
-                <label className="text-sm text-slate-300">Entity id (optional)</label>
+                <label className="text-sm text-slate-300">
+                  Entity id (optional)
+                </label>
                 <input
                   value={createEntityId}
                   onChange={(e) => setCreateEntityId(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-white focus:border-purple-500 focus:outline-none"
+                  className="mt-1 w-full cursor-text rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-white transition hover:border-slate-600 focus:border-purple-500 focus:outline-none"
                   placeholder="e.g. character id"
                 />
                 <div className="mt-2 rounded-lg border border-slate-700/70 bg-slate-800/60 p-2 text-xs text-slate-400">
-                  Hotkeys: Cmd/Ctrl + Enter to save, Esc to close. Attach to characters, NPCs, maps, or handouts.
+                  Hotkeys: Cmd/Ctrl + Enter to save, Esc to close. Attach to
+                  characters, NPCs, maps, or handouts.
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
               {createMutation.status === "error" && (
-                <span className="text-sm text-red-300">Could not save note.</span>
+                <span className="text-sm text-red-300">
+                  Could not save note.
+                </span>
               )}
               {createMutation.status === "success" && (
                 <span className="text-sm text-green-300">Saved!</span>
@@ -356,16 +387,18 @@ export function NotesCommandPalette() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setOpen(false)}
-                  className="rounded-lg px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800"
+                  className="cursor-pointer rounded-lg px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => createMutation.mutate()}
                   disabled={!body.trim() || createMutation.status === "pending"}
-                  className="rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition disabled:opacity-60"
+                  className="cursor-pointer rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-purple-500 hover:to-pink-500 focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {createMutation.status === "pending" ? "Saving..." : "Save note"}
+                  {createMutation.status === "pending"
+                    ? "Saving..."
+                    : "Save note"}
                 </button>
               </div>
             </div>

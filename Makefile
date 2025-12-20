@@ -1,4 +1,4 @@
-.PHONY: build dev frontend backend migrate clean docker test
+.PHONY: build dev frontend backend migrate clean docker test gen vet deps frontend-deps release
 
 # Build everything
 build: frontend copy-assets
@@ -33,6 +33,14 @@ dev:
 migrate:
 	go run ./cmd/server -migrate-only
 
+# Generate sqlc code
+gen:
+	go tool sqlc generate -f internal/store/sqlc.yaml
+
+# Verify sqlc queries
+verify:
+	go tool sqlc vet -f internal/store/sqlc.yaml
+
 # Clean build artifacts
 clean:
 	rm -rf bin/
@@ -55,3 +63,9 @@ deps:
 # Install frontend dependencies
 frontend-deps:
 	cd web && npm install
+
+# Tag and push a release (VERSION=vX.Y.Z)
+release:
+	@test -n "$(VERSION)" || (echo "VERSION required, e.g. make release VERSION=v1.2.3" && exit 1)
+	git tag $(VERSION)
+	git push origin $(VERSION)

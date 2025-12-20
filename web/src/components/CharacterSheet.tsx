@@ -25,7 +25,6 @@ import { AbilityScoresSection } from "./character-sheet/AbilityScoresSection";
 import { CombatStatsSection } from "./character-sheet/CombatStatsSection";
 import { SavingThrowsSection } from "./character-sheet/SavingThrowsSection";
 import { SkillsSection } from "./character-sheet/SkillsSection";
-import { NotesSection } from "./character-sheet/NotesSection";
 import type { AbilityMethod, AbilityScores } from "./character-sheet/types";
 
 interface CharacterSheetProps {
@@ -130,7 +129,6 @@ export function CharacterSheet({
           savingThrowProficiencies: character.savingThrowProficiencies,
           features: character.features,
           equipment: character.equipment,
-          notes: character.notes,
         }
       : {
           name: "",
@@ -156,7 +154,6 @@ export function CharacterSheet({
           savingThrowProficiencies: [],
           features: [],
           equipment: [],
-          notes: "",
         },
   });
 
@@ -431,8 +428,6 @@ export function CharacterSheet({
           setSkillProficiencies={setSkillProficiencies}
           proficiencyBonus={proficiencyBonus}
         />
-
-        <NotesSection register={register} />
 
         {/* Error and Submit */}
         {error && (

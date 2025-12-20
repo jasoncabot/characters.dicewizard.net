@@ -32,7 +32,6 @@ export interface Character {
   savingThrowProficiencies: Ability[];
   features: string[];
   equipment: string[];
-  notes: string;
   avatarUrl?: string;
 
   // Computed (from backend)
@@ -74,7 +73,6 @@ export interface CharacterCreate {
   savingThrowProficiencies: Ability[];
   features: string[];
   equipment: string[];
-  notes: string;
 }
 
 // User types for multi-account support
@@ -233,7 +231,10 @@ export const SPECIES_TRAITS = {
     speed: 30,
     traits: ["Darkvision", "Fiendish Legacy", "Otherworldly Presence"],
   },
-} as const satisfies Record<Species, { size: CreatureSize; speed: number; traits: readonly string[] }>;
+} as const satisfies Record<
+  Species,
+  { size: CreatureSize; speed: number; traits: readonly string[] }
+>;
 
 export type SpeciesTrait = (typeof SPECIES_TRAITS)[Species]["traits"][number];
 

@@ -9,5 +9,7 @@ export type OpenNotePaletteDetail = {
 };
 
 export function openNotePalette(detail: OpenNotePaletteDetail = {}) {
-  window.dispatchEvent(new CustomEvent<OpenNotePaletteDetail>("open-note-palette", { detail }));
+  window.dispatchEvent(
+    new CustomEvent<OpenNotePaletteDetail>("open-note-palette", { detail }),
+  );
 }
