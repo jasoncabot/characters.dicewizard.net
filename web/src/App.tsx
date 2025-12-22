@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Button } from "@headlessui/react";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { LoginForm } from "./components/LoginForm";
 import { CharacterList } from "./components/CharacterList";
 import { CharacterSheet } from "./components/CharacterSheet";
+import { CharacterCreationWizard } from "./components/CharacterCreationWizard";
 import { Campaigns } from "./components/Campaigns";
 import { PlayerPortal } from "./components/PlayerPortal";
 import { PlayerViewModal } from "./components/PlayerViewModal";
+import { Sidebar } from "./components/Sidebar";
 import type { Character } from "./types/character";
 import { NotesCommandPalette } from "./components/NotesCommandPalette";
 
@@ -30,10 +31,18 @@ function AppContent() {
     clearNewUserFlag,
   } = useAuth();
   const [path, setPath] = useState(() => window.location.pathname || "/");
-  const [view, setView] = useState<"list" | "new" | "edit" | "campaigns" | "player">("list");
+  const [view, setView] = useState<
+    "list" | "new" | "edit" | "campaigns" | "player"
+  >(() => {
+    const p = window.location.pathname || "/";
+    if (p.startsWith("/player")) return "player";
+    if (p === "/campaigns") return "campaigns";
+    return "list";
+  });
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(
     null,
   );
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   const isPlayerRoute = path.startsWith("/player");
   const playerId = (() => {
@@ -50,25 +59,34 @@ function AppContent() {
     if (to === path) return;
     window.history.pushState({}, "", to);
     setPath(to || "/");
+
+    // Sync view with path
+    if (to.startsWith("/player")) {
+      setView("player");
+    } else if (to === "/campaigns") {
+      setView("campaigns");
+    } else if (to === "/") {
+      setView("list");
+    }
   };
 
   useEffect(() => {
-    const handler = () => setPath(window.location.pathname || "/");
+    const handler = () => {
+      const newPath = window.location.pathname || "/";
+      setPath(newPath);
+
+      // Sync view with path on back/forward
+      if (newPath.startsWith("/player")) {
+        setView("player");
+      } else if (newPath === "/campaigns") {
+        setView("campaigns");
+      } else if (newPath === "/") {
+        setView("list");
+      }
+    };
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
   }, []);
-
-  useEffect(() => {
-    if (isPlayerRoute) {
-      setView("player");
-      return;
-    }
-    if (path === "/campaigns") {
-      setView("campaigns");
-      return;
-    }
-    setView("list");
-  }, [isPlayerRoute, path]);
 
   // Auto-navigate new users to character creation
   useEffect(() => {
@@ -80,9 +98,26 @@ function AppContent() {
     }
   }, [isNewUser, clearNewUserFlag]);
 
+  const handleNavigate = (navId: string) => {
+    switch (navId) {
+      case "list":
+        setView("list");
+        navigate("/");
+        break;
+      case "campaigns":
+        setView("campaigns");
+        navigate("/campaigns");
+        break;
+      case "player":
+        setView("player");
+        navigate("/player");
+        break;
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-500 border-t-transparent"></div>
       </div>
     );
@@ -92,143 +127,105 @@ function AppContent() {
     return <LoginForm />;
   }
 
+  // Player table view - full screen, no sidebar
+  if (isPlayerTable) {
+    return (
+      <div className="h-screen w-screen bg-slate-950">
+        <NotesCommandPalette />
+        <PlayerViewModal
+          campaignId={playerId!}
+          onClose={() => navigate("/player")}
+          variant="page"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={
-        isPlayerTable
-          ? "min-h-screen bg-slate-950"
-          : "min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
-      }
-    >
+    <div className="flex h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <NotesCommandPalette />
-      {/* Header */}
-      {!isPlayerTable && (
-        <header className="sticky top-0 z-10 border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">⚔️</span>
-              <h1 className="text-xl font-bold text-white">
-                D&D Character Sheets
-              </h1>
-              <div className="ml-6 flex gap-2">
-                <button
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${view === "list" || view === "new" || view === "edit" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-200 hover:bg-slate-700"}`}
-                  onClick={() => {
-                    setView("list");
-                    navigate("/");
-                  }}
-                >
-                  Characters
-                </button>
-                <button
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${view === "campaigns" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-200 hover:bg-slate-700"}`}
-                  onClick={() => {
-                    setView("campaigns");
-                    navigate("/campaigns");
-                  }}
-                >
-                  Campaigns
-                </button>
-                <button
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${view === "player" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-200 hover:bg-slate-700"}`}
-                  onClick={() => {
-                    setView("player");
-                    navigate("/player");
-                  }}
-                >
-                  Player table
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="cursor-default text-slate-400">
-                Welcome,{" "}
-                <span className="font-medium text-purple-400">
-                  {user?.username}
-                </span>
-              </span>
-              <Button
-                onClick={logout}
-                className="cursor-pointer rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-300 transition hover:bg-slate-700 focus:ring-2 focus:ring-purple-500 focus:outline-none active:bg-slate-600"
-              >
-                Logout
-              </Button>
-            </div>
-          </div>
-        </header>
-      )}
 
-      {/* Main Content */}
-      <main className={isPlayerTable ? "min-h-screen" : "mx-auto max-w-7xl px-4 py-8"}>
-        {isPlayerRoute ? (
-          playerId ? (
-            <PlayerViewModal
-              campaignId={playerId}
-              onClose={() => navigate("/player")}
-              variant="page"
-            />
-          ) : (
-            <PlayerPortal
-              onBack={() => navigate("/campaigns")}
-              onOpenPlayerView={(id) => navigate(`/player/${id}`)}
-            />
-          )
-        ) : (
-          <>
-            {view === "list" && (
-              <CharacterList
-                onSelect={(character) => {
-                  setSelectedCharacter(character);
-                  setView("edit");
-                }}
-                onNew={() => {
-                  setSelectedCharacter(null);
-                  setView("new");
-                }}
-              />
-            )}
+      {/* Sidebar */}
+      <Sidebar
+        currentView={view}
+        onNavigate={handleNavigate}
+        username={user?.username || ""}
+        onLogout={logout}
+        expanded={sidebarExpanded}
+        onExpandedChange={setSidebarExpanded}
+      />
 
-            {view === "campaigns" && (
-              <Campaigns
-                onOpenPlayerPortal={() => navigate("/player")}
-                onOpenPlayerView={(id) => navigate(`/player/${id}`)}
-              />
-            )}
-
-            {view === "player" && (
+      {/* Main Content Area */}
+      <div className="flex min-w-0 flex-1 flex-col pt-14 lg:pt-0">
+        <main className="flex-1 overflow-y-auto">
+          <div className="h-full w-full">
+            {isPlayerRoute ? (
               <PlayerPortal
                 onBack={() => navigate("/campaigns")}
                 onOpenPlayerView={(id) => navigate(`/player/${id}`)}
               />
-            )}
+            ) : (
+              <>
+                {view === "list" && (
+                  <CharacterList
+                    onSelect={(character) => {
+                      setSelectedCharacter(character);
+                      setView("edit");
+                    }}
+                    onNew={() => {
+                      setSelectedCharacter(null);
+                      setView("new");
+                    }}
+                  />
+                )}
 
-            {(view === "new" || view === "edit") && (
-              <CharacterSheet
-                character={selectedCharacter}
-                onBack={() => {
-                  setView("list");
-                  setSelectedCharacter(null);
-                  navigate("/");
-                }}
-                onSaved={() => {
-                  setView("list");
-                  setSelectedCharacter(null);
-                  navigate("/");
-                }}
-              />
-            )}
-          </>
-        )}
-      </main>
+                {view === "campaigns" && (
+                  <Campaigns
+                    onOpenPlayerPortal={() => navigate("/player")}
+                    onOpenPlayerView={(id) => navigate(`/player/${id}`)}
+                  />
+                )}
 
-      {/* Footer */}
-      {!isPlayerTable && (
-        <footer className="mt-auto border-t border-slate-700/50 py-6">
-          <div className="mx-auto max-w-7xl px-4 text-center text-sm text-slate-500">
-            Self-hosted D&D Character Sheets • Built with Go + React
+                {view === "player" && (
+                  <PlayerPortal
+                    onBack={() => navigate("/campaigns")}
+                    onOpenPlayerView={(id) => navigate(`/player/${id}`)}
+                  />
+                )}
+
+                {view === "new" && (
+                  <CharacterCreationWizard
+                    onBack={() => {
+                      setView("list");
+                      navigate("/");
+                    }}
+                    onSaved={() => {
+                      setView("list");
+                      navigate("/");
+                    }}
+                  />
+                )}
+
+                {view === "edit" && (
+                  <CharacterSheet
+                    character={selectedCharacter}
+                    onBack={() => {
+                      setView("list");
+                      setSelectedCharacter(null);
+                      navigate("/");
+                    }}
+                    onSaved={() => {
+                      setView("list");
+                      setSelectedCharacter(null);
+                      navigate("/");
+                    }}
+                  />
+                )}
+              </>
+            )}
           </div>
-        </footer>
-      )}
+        </main>
+      </div>
     </div>
   );
 }

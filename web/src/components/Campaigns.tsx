@@ -122,7 +122,7 @@ export function Campaigns({
   // reuse createMutation only; per-card mutation handles updates
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-white">Campaigns</h2>

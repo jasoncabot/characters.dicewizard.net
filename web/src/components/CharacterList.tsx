@@ -120,7 +120,7 @@ export function CharacterList({ onSelect, onNew }: CharacterListProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <h2 className="cursor-default text-2xl font-bold text-white">
             Your Characters

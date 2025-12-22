@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { campaignsApi } from "../api/client";
@@ -36,6 +36,7 @@ export function PlayerViewModal({
   const [tokenPositions, setTokenPositions] = useState<
     Record<number, { x: number; y: number }>
   >({});
+
   const saveQueueRef = useRef<Set<number>>(new Set());
   const saveTimerRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
@@ -65,14 +66,20 @@ export function PlayerViewModal({
     return tokens.filter((t) => !t.audience?.includes("gm-only"));
   }, [isDM, map]);
 
-  useEffect(() => {
+  const [prevVisibleTokens, setPrevVisibleTokens] = useState(visibleTokens);
+  const [prevMapId, setPrevMapId] = useState(map?.id);
+
+  if (visibleTokens !== prevVisibleTokens || map?.id !== prevMapId) {
+    setPrevVisibleTokens(visibleTokens);
+    setPrevMapId(map?.id);
+
     const nextPositions: Record<number, { x: number; y: number }> = {};
     visibleTokens.forEach((t) => {
       nextPositions[t.id] = { x: t.positionX, y: t.positionY };
     });
     setTokenPositions(nextPositions);
     setSelectedTokenIds([]);
-  }, [visibleTokens, map?.id]);
+  }
 
   const gridSizePx = 48;
 

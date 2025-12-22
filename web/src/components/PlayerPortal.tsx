@@ -42,7 +42,7 @@ export function PlayerPortal({
   }, [data, search]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-sm tracking-wide text-purple-200/80 uppercase">
@@ -188,7 +188,6 @@ export function PlayerPortal({
           </div>
         ))}
       </div>
-
     </div>
   );
 }
